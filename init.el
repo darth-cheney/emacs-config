@@ -145,7 +145,7 @@
 ;; Dim the other (inactive) buffer windows
 (use-package dimmer
   ;;:diminish dimmer-mode
-  :disabled
+  ;;:disabled
   :custom ((dimmer-fraction 0.25)
            ;; :both will dim background and foreground
            (dimmer-adjustment-mode :foreground)))
