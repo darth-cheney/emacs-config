@@ -233,8 +233,16 @@ cursor into the new window"
 (global-set-key (kbd "M-C-7") (lambda () (interactive) (modify-frame-parameters nil `((alpha . 100)))))
 
 ;; Magit Config --------------------------------------------------------
+;; Ensure magit shows in full frames (much better)
+(use-package fullframe)
+
 (use-package magit
-  :bind (("C-x g" . magit-status)))
+  :init(fullframe magit-status magit-mode-quit-window)
+  :bind (("C-x g" . magit-status))
+  :custom ((magit-diff-refine-hunk t)))
+
+(use-package git-commit
+  :hook ((git-commit-mode . goto-address-mode)))
 
 ;; Completion Config ---------------------------------------------------
 
