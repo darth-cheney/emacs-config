@@ -315,6 +315,9 @@ cursor into the new window"
 (use-package company-box
   :hook (company-mode . company-box-mode))
 
+;; Org Mode Config -----------------------------------------------------
+(use-package org)
+
 ;; IRC -----------------------------------------------------------------
   (defcustom eg/irc-password nil "Default password to use for IRC connections")
   (setq rcirc-default-nick "darth-cheney")
