@@ -51,6 +51,25 @@
 ;; (global-display-line-numbers-mode t)
 ;; (use-package command-log-mode) ;; For logging keypresses
 
+;; Custom Commands
+;; ---------------------------------------------------------------------
+(defun eg/is-current-buffer (buff)
+  "Respond true if the given buffer is the current buffer"
+  (eq buff (current-buffer)))
+
+
+(defun eg/get-all-non-current-buffers ()
+  "Return a list of all current buffers aside from the current one"
+  (seq-filter '(lambda (buff)
+                 (not (eg/is-current-buffer buff)))
+              (buffer-list)))
+
+(defun kill-other-buffers ()
+  "Kill all open buffers aside from the current one"
+  (interactive)
+  (mapcar 'kill-buffer (eg/get-all-non-current-buffers))
+  (delete-other-windows))
+
 ;; Ivy Configuration ---------------------------------------------------
 (use-package ivy
 	     :diminish
@@ -71,6 +90,10 @@
 ;; M-x all-the-icons-install-fonts
 ;; interactively when you first load a fresh config
 (use-package all-the-icons)
+
+;; Hydra Config ----------------------------------------------------------
+(use-package hydra)
+
 
 ;; Modeline Config -------------------------------------------------------
 ;; DOOM Modeline
@@ -290,7 +313,9 @@ cursor into the new window"
 ;; | HTML / Web           |
 ;; |----------------------|
 (use-package web-mode
-  :config ((add-to-list 'auto-mode-alist '("\\.html?\\'" . web-mode))))
+  :config (
+                                        ;(add-to-list 'auto-mode-alist '("\\.html?\\'" . web-mode))
+           ))
 
 ;; LSP Config ----------------------------------------------------------
 (defun eg/lsp-mode-setup ()
@@ -309,6 +334,15 @@ cursor into the new window"
 ;; to definitions in a file from a list
 (use-package lsp-ivy)
 
+
+;; DAP Config ----------------------------------------------------------
+(use-package dap-mode
+  :config
+  (require 'dap-node)
+  (dap-node-setup)
+  (require 'dap-firefox)
+  (require 'dap-chrome))
+
 ;; Company Mode Config -------------------------------------------------
 (use-package company
   :after lsp-mode
@@ -326,6 +360,45 @@ cursor into the new window"
 ;; Org Mode Config -----------------------------------------------------
 (use-package org)
 
+;; Elisp and Generic Lisp Config ---------------------------------------
+(add-hook 'lisp-mode-hook 'show-paren-mode)
+
+;; Slime config --------------------------------------------------------
+(defun eg/setup-slime-keybindings ()
+  "For use in slime-repl-mode-hook for
+fixing clashing windmove keybindings"
+  (define-key slime-repl-mode-map (kbd "C-<down>") 'windmove-down)
+  (define-key slime-repl-mode-map (kbd "C-<up>") 'windmove-up)
+  (define-key slime-repl-mode-map (kbd "C-<right>") 'windmove-right)
+  (define-key slime-repl-mode-map (kbd "C-<left>") 'windmove-left)
+  (define-key slime-repl-mode-map (kbd "S-C-<up>") 'slime-repl-previous-input)
+  (define-key slime-repl-mode-map (kbd "S-C-<down>") 'slime-repl-next-input))
+
+(use-package slime
+  :custom (inferior-lisp-program "sbcl")
+  :init
+  (load (expand-file-name "~/quicklisp/slime-helper.el")))
+
+;;(add-hook 'slime-mode-hook #'eg/setup-slime-keybindings)
+(add-hook 'slime-repl-mode-hook #'eg/setup-slime-keybindings)
+
+;; Add auto-mode for lisp files
+(add-to-list 'auto-mode-alist '("\\.cl$" . common-lisp-mode))
+(add-to-list 'auto-mode-alist '("\\.lisp$" . lisp-mode))
+
+
+;; Scheme Config (Geiser) ----------------------------------------------
+(use-package geiser)
+
+;; Dired Mode Config ---------------------------------------------------
+(define-key dired-mode-map [mouse-2] 'dired-mouse-find-file)
+
+;; Eshell
+(use-package eshell-git-prompt)
+(use-package eshell
+  :config
+  (eshell-git-prompt-use-theme 'powerline))
+
 ;; IRC -----------------------------------------------------------------
   (defcustom eg/irc-password nil "Default password to use for IRC connections")
   (setq rcirc-default-nick "darth-cheney")
@@ -333,7 +406,49 @@ cursor into the new window"
     "Set the custom irc pass variable and add it to the
 rcirc authinfo list for Freenode"
     (interactive "sEnter your Freenode Pass: ")
-    (setq  eg/irc-password passwd)
+    (setq eg/irc-password passwd)
     (setq rcirc-authinfo '(("freenode" nickserv "darth-cheney" eg/irc-password))))
 
 (if (not eg/irc-password) (call-interactively 'eg/get-irc-password))
+(put 'erase-buffer 'disabled nil)
+
+;; Org Mode Config -----------------------------------------------------
+(defun eg/org-mode-setup ())
+
+(use-package org
+  :hook ((org-mode . eg/org-mode-setup)))
+
+(setq org-agenda-restore-windows-after-quit t)
+(setq org-agenda-skip-unavailable-files t)
+
+;; Org Journal Config --------------------------------------------------
+(use-package org-journal)
+
+;; Command Log Mode ----------------------------------------------------
+;; for debugging entered key commands
+(use-package command-log-mode)
+
+;; Snippets Config -----------------------------------------------------
+(use-package yasnippet)
+(yas-global-mode 1)
+(use-package yasnippet-snippets)
+
+;; Treemacs Mode Config ------------------------------------------------
+(use-package treemacs)
+(global-set-key (kbd "C-t") 'treemacs)
+
+;; Projectile Config ---------------------------------------------------
+(use-package projectile
+  :diminish projectile-mode
+  :config (projectile-mode)
+  :custom ((projectile-completion-system 'ivy))
+  :bind-keymap
+  ("C-c p" . projectile-command-map)
+  :init
+  ;; NOTE: Set this to the folder where you keep your Git repos!
+  (when (file-directory-p "~/projects")
+    (setq projectile-project-search-path '("~/projects")))
+  (setq projectile-switch-project-action #'projectile-dired))
+
+;; Additional Custom Functions -----------------------------------------
+(load "~/.emacs.d/eric-functions.el")
