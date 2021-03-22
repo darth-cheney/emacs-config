@@ -437,10 +437,22 @@ rcirc authinfo list for Freenode"
 (use-package treemacs)
 (global-set-key (kbd "C-t") 'treemacs)
 
+;; Olivetti Mode Config ------------------------------------------------
+(use-package olivetti)
+
+;; Org-Roam Config -----------------------------------------------------
+(use-package org-roam
+  :config
+  (make-directory "~/Documents/org-roam" t)
+  :custom
+  (org-roam-directory "~/Documents/org-roam")
+  :hook
+  ((after-init . org-roam-mode)))
+
 ;; Projectile Config ---------------------------------------------------
 (use-package projectile
   :diminish projectile-mode
-  :config (projectile-mode)
+  :config (projectile-mode)f
   :custom ((projectile-completion-system 'ivy))
   :bind-keymap
   ("C-c p" . projectile-command-map)
