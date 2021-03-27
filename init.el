@@ -357,9 +357,6 @@ cursor into the new window"
 (use-package company-box
   :hook (company-mode . company-box-mode))
 
-;; Org Mode Config -----------------------------------------------------
-(use-package org)
-
 ;; Elisp and Generic Lisp Config ---------------------------------------
 (add-hook 'lisp-mode-hook 'show-paren-mode)
 
@@ -413,10 +410,29 @@ rcirc authinfo list for Freenode"
 (put 'erase-buffer 'disabled nil)
 
 ;; Org Mode Config -----------------------------------------------------
-(defun eg/org-mode-setup ())
+(defun eg/org-mode-setup ()
+  ;;(org-indent-mode)
+  (variable-pitch-mode 1)
+  (visual-line-mode 1))
+
+(defun eg/org-font-setup ()
+  ;; Taken from daviwil's config.
+  (dolist (face '((org-level-1 . 2.6)
+                  (org-level-2 . 1.4)
+                  (org-level-3 . 1.2)
+                  (org-level-4 . 1.1)
+                  (org-level-5 . 1.0)
+                  (org-level-6 . 1.0)
+                  (org-level-7 . 1.0)
+                  (org-level-8 . 1.0)))
+  (set-face-attribute (car face) nil :family "EtBembo" :weight 'bold :height (cdr face)))
+  ;;(set-face-attribute 'variable-pitch nil :family "EtBembo")
+  (message "EAT SHIT!"))
 
 (use-package org
-  :hook ((org-mode . eg/org-mode-setup)))
+  :hook ((org-mode . eg/org-mode-setup))
+  :config
+  (eg/org-font-setup))
 
 (setq org-agenda-restore-windows-after-quit t)
 (setq org-agenda-skip-unavailable-files t)
