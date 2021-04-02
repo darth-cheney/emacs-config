@@ -85,6 +85,12 @@
 	     :init
 	     (ivy-rich-mode 1))
 
+
+;; Smex shows the most recently-used commands at the
+;; top of the minibuffer when executing interactively
+(use-package smex)
+
+
 ;; All the icons.
 ;; Note that you will need to run
 ;; M-x all-the-icons-install-fonts
@@ -391,10 +397,30 @@ fixing clashing windmove keybindings"
 (define-key dired-mode-map [mouse-2] 'dired-mouse-find-file)
 
 ;; Eshell
-(use-package eshell-git-prompt)
+(defun eg/eshell-setup ()
+  ;; From daviwil - Save command historyu when commands are entered
+  (add-hook 'eshell-pre-command-hook 'eshell-save-some-history)
+
+  ;; From daviwil - Truncate buffer for performance
+  (add-hook 'eshell-output-filter-functions 'eshell-truncate-buffer)
+
+  ;; Other settings taken from daviwil:
+  (setq eshell-history-size 10000
+        eshell-buffer-maximum-lines 10000
+        eshell-hist-ignore-dumps t
+        eshell-scroll-to-bottom-on-input t))
+(use-package eshell-git-prompt
+  :after eshell)
 (use-package eshell
+  :hook (eshell-first-time-mode . eg/eshell-setup)
   :config
-  (eshell-git-prompt-use-theme 'powerline))
+  (eshell-git-prompt-use-theme 'powerline)
+
+  ;; Also from daviwil. These might help with visual
+  ;; programs in the terminal
+  (with-eval-after-load 'esh-opt
+    (setq eshell-destroy-buffer-when-process-dies t)
+    (setq eshell-visual-commands '("htop" "bash" "npm" "node" "mocha"))))
 
 ;; IRC -----------------------------------------------------------------
   (defcustom eg/irc-password nil "Default password to use for IRC connections")
