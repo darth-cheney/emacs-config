@@ -37,7 +37,7 @@
 setup for today's month and day combination"
   (interactive)
   (setq eg/projects-directory "~/projects")
-  (setq eg/simpletalk-repo "github.com:UnitedLexCorp/SimpleTalk")
+  (setq eg/simpletalk-repo "github.com:dkrasner/Simpletalk")
   (let* (
          (dir-paths (eg/get-project-dirs-alist
                      (concat "simpletalk-" (format-time-string "%m-%d"))
