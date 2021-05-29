@@ -175,7 +175,7 @@
 (use-package dimmer
   ;;:diminish dimmer-mode
   ;;:disabled
-  :custom ((dimmer-fraction 0.25)
+  :custom ((dimmer-fraction 0.45)
            ;; :both will dim background and foreground
            (dimmer-adjustment-mode :foreground)))
   :config (dimmer-mode t)
