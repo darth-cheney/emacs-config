@@ -5,10 +5,16 @@
 ;; file, and load that file if it's there
 (setq custom-file (concat user-emacs-directory "/custom.el"))
 (load-file custom-file)
+(message "irc password loaded:")
+(message (boundp 'eg/irc-password))
 
 ;; My default fontsize
-(defvar eric-custom/default-font-size 120)
-(set-face-attribute 'default nil :font "Fira Code" :height 110)
+(defvar eric-custom/default-font-size 130)
+(set-face-attribute 'default nil :font "Fira Code" :height 132)
+
+;; Some quirks
+;; Ignore Common Lisp deprecation warnings
+(setq byte-compile-warnings '(cl-functions))
 
 ;; Basic UI ------------------------------------------------------------
 (scroll-bar-mode -1)        ; Disable visible scrollbar
@@ -424,17 +430,19 @@ fixing clashing windmove keybindings"
     (setq eshell-visual-commands '("htop" "bash" "npm" "node" "mocha"))))
 
 ;; IRC -----------------------------------------------------------------
-  (defcustom eg/irc-password nil "Default password to use for IRC connections")
-  (setq rcirc-default-nick "darth-cheney")
-  (defun eg/get-irc-password (passwd)
-    "Set the custom irc pass variable and add it to the
+(defun eg/get-irc-password ()
+  "Set the custom irc pass variable and add it to the
 rcirc authinfo list for Freenode"
-    (interactive "sEnter your Libera Pass: ")
-    (setq eg/irc-password passwd)
-    (setq rcirc-authinfo '(("libera" nickserv "darth-cheney" eg/irc-password))))
+  (interactive)
+  (customize-save-variable 'eg/irc-password (read-passwd "Enter Libera pass: "))
+  (customize-save-variable 'rcirc-authinfo '(("libera" nickserv "darth-cheney" eg/irc-password)))
+  (customize-save-variable 'rcirc-default-nick "darth-cheney"))
 
-(if (not eg/irc-password) (call-interactively 'eg/get-irc-password))
-(put 'erase-buffer 'disabled nil)
+(if (not (boundp 'eg/irc-password))
+    (progn
+      (defcustom eg/irc-password nil "Default password to use for IRC connections")
+      (call-interactively 'eg/get-irc-password)))
+;;(put 'erase-buffer 'disabled nil)
 
 ;; Org Mode Config -----------------------------------------------------
 (defun eg/org-mode-setup ()
@@ -443,19 +451,16 @@ rcirc authinfo list for Freenode"
   (visual-line-mode 1)
   (setq org-hide-emphasis-markers t))
 
-(defun eg/org-font-setup ()
-  ;; Taken from daviwil's config.
-  (dolist (face '((org-level-1 . 2.6)
-                  (org-level-2 . 2.2)
-                  (org-level-3 . 1.8)
-                  (org-level-4 . 1.5)
-                  (org-level-5 . 1.3)
-                  (org-level-6 . 1.2)
-                  (org-level-7 . 1.1)
-                  (org-level-8 . 1.0)))
-    (set-face-attribute (car face) nil :family "EtBembo" :weight 'bold :height (cdr face)))
-  (set-face-attribute 'variable-pitch nil :family "EtBembo" :height 1.4 :weight thin)
-  (message "EAT SHIT!"))
+(defvar eg/org-mode-font-family "LibreBaskerville" "Font family to use in org mode. Depends on system-name (see init.el). defaults to Libre Baskerville, but will be EtBembo on Pop_OS based systems, which have a hard time rendering Libre Baskerville for some reason")
+(defvar eg/org-mode-font-height-factor 1.0 "Factor by which to display variable pitch fonts in Org Mode")
+;; Pop_OS has some weird character issue when
+;; rendering Libre Baskerville.
+;; If we are using Pop_OS, use EtBembo instead
+;; and increase the height factor
+(if (string-equal (system-name) "pop-os")
+    (progn
+      (setq eg/org-mode-font-family "EtBembo")
+      (setq eg/org-mode-font-height-factor 1.8)))
 
 (use-package org
   :custom
@@ -465,7 +470,6 @@ rcirc authinfo list for Freenode"
   (org-fontify-done-headline t)
   (org-fontify-quote-and-verse-blocks t)
   :custom-face
-  (variable-pitch ((t (:family "LibreBaskerville"))))
   (org-document-title ((t (:weight bold :height 1.5))))
   (org-done ((t (:strike-through t :weight bold))))
   (org-headline-done ((t (:strike-through t))))
@@ -474,22 +478,28 @@ rcirc authinfo list for Freenode"
   (org-level-3 ((t (:height 1.1 :weight bold))))
   (org-image-actual-width (/ (display-pixel-width) 2)))
 
-(add-hook 'org-mode-hook
-          '(lambda ()
-             (setq line-spacing 0.2) ;; Add more line padding for readability
-             (variable-pitch-mode 1) ;; All fonts with variable pitch.
-             (mapc
-              (lambda (face) ;; Other fonts with fixed-pitch.
-                (set-face-attribute face nil :inherit 'fixed-pitch))
-              (list 'org-code
-                    'org-link
-                    'org-block
-                    'org-table
-                    'org-verbatim
-                    'org-block-begin-line
-                    'org-block-end-line
-                    'org-meta-line
-                    'org-document-info-keyword))))
+(add-hook
+ 'org-mode-hook
+ '(lambda ()
+    (setq line-spacing 0.2) ;; Add more line padding for readability
+    ;; We set the variable pitch here because we are using semi-quoted
+    ;; for variables, which apparently does not work with use-package's
+    ;; basic :custom-face capability
+    (custom-set-faces `(variable-pitch ((t (:family ,eg/org-mode-font-family)))))
+    (variable-pitch-mode 1) ;; All fonts with variable pitch.
+    (text-scale-adjust 3) ;; Adjust text scale
+    (mapc
+     (lambda (face) ;; Other fonts with fixed-pitch.
+       (set-face-attribute face nil :inherit 'fixed-pitch))
+     (list 'org-code
+           'org-link
+           'org-block
+           'org-table
+           'org-verbatim
+           'org-block-begin-line
+           'org-block-end-line
+           'org-meta-line
+           'org-document-info-keyword))))
 
 (setq org-agenda-restore-windows-after-quit t)
 (setq org-agenda-skip-unavailable-files t)
