@@ -8,6 +8,7 @@
 
 ;; My default fontsize
 (defvar eric-custom/default-font-size 120)
+(set-face-attribute 'default nil :font "Fira Code" :height 110)
 
 ;; Basic UI ------------------------------------------------------------
 (scroll-bar-mode -1)        ; Disable visible scrollbar
@@ -428,9 +429,9 @@ fixing clashing windmove keybindings"
   (defun eg/get-irc-password (passwd)
     "Set the custom irc pass variable and add it to the
 rcirc authinfo list for Freenode"
-    (interactive "sEnter your Freenode Pass: ")
+    (interactive "sEnter your Libera Pass: ")
     (setq eg/irc-password passwd)
-    (setq rcirc-authinfo '(("freenode" nickserv "darth-cheney" eg/irc-password))))
+    (setq rcirc-authinfo '(("libera" nickserv "darth-cheney" eg/irc-password))))
 
 (if (not eg/irc-password) (call-interactively 'eg/get-irc-password))
 (put 'erase-buffer 'disabled nil)
@@ -457,9 +458,38 @@ rcirc authinfo list for Freenode"
   (message "EAT SHIT!"))
 
 (use-package org
-  :hook ((org-mode . eg/org-mode-setup))
-  :config
-  (eg/org-font-setup))
+  :custom
+  (org-pretty-entities t)
+  (org-hide-emphasis-markers t)
+  (org-fontify-whole-heading-line t)
+  (org-fontify-done-headline t)
+  (org-fontify-quote-and-verse-blocks t)
+  :custom-face
+  (variable-pitch ((t (:family "LibreBaskerville"))))
+  (org-document-title ((t (:weight bold :height 1.5))))
+  (org-done ((t (:strike-through t :weight bold))))
+  (org-headline-done ((t (:strike-through t))))
+  (org-level-1 ((t (:height 1.3 :weight bold))))
+  (org-level-2 ((t (:height 1.2 :weight bold))))
+  (org-level-3 ((t (:height 1.1 :weight bold))))
+  (org-image-actual-width (/ (display-pixel-width) 2)))
+
+(add-hook 'org-mode-hook
+          '(lambda ()
+             (setq line-spacing 0.2) ;; Add more line padding for readability
+             (variable-pitch-mode 1) ;; All fonts with variable pitch.
+             (mapc
+              (lambda (face) ;; Other fonts with fixed-pitch.
+                (set-face-attribute face nil :inherit 'fixed-pitch))
+              (list 'org-code
+                    'org-link
+                    'org-block
+                    'org-table
+                    'org-verbatim
+                    'org-block-begin-line
+                    'org-block-end-line
+                    'org-meta-line
+                    'org-document-info-keyword))))
 
 (setq org-agenda-restore-windows-after-quit t)
 (setq org-agenda-skip-unavailable-files t)
