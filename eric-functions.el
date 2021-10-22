@@ -38,9 +38,10 @@ setup for today's month and day combination"
   (interactive)
   (setq eg/projects-directory "~/projects")
   (setq eg/simpletalk-repo "github.com:dkrasner/Simpletalk")
+  (setq eg/simpletalk-node-version "14.18.1")
   (let* (
          (dir-paths (eg/get-project-dirs-alist
-                     (concat "simpletalk-" (format-time-string "%m-%d"))
+                     (concat "simpletalk-" (format-time-string "%m-%d-%y"))
                      "SimpleTalk"))
          (root-path (cdr (assoc "root-path" dir-paths)))
          (nodeenv-path (cdr (assoc "nodeenv-path" dir-paths)))
@@ -67,7 +68,7 @@ setup for today's month and day combination"
         (add-to-list
          'command-list
          (format
-          "nodeenv --prebuilt %s" nodeenv-path)))
+          "nodeenv --prebuilt --node=%s %s" eg/simpletalk-node-version nodeenv-path)))
     
     ;; Attempt to source into the nodeenv
     ;; and install any dependencies
