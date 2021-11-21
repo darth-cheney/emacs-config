@@ -5,12 +5,14 @@
 ;; file, and load that file if it's there
 (setq custom-file (concat user-emacs-directory "/custom.el"))
 (load-file custom-file)
-(message "irc password loaded:")
-(message (boundp 'eg/irc-password))
 
 ;; My default fontsize
 (defvar eric-custom/default-font-size 130)
 (set-face-attribute 'default nil :font "Fira Code" :height 132)
+
+;;(if (equal (system-name) "reform")
+;;    (set-face-attribute 'default nil :font "Iosevka Term" :height 140))
+
 
 ;; Some quirks
 ;; Ignore Common Lisp deprecation warnings
@@ -30,7 +32,9 @@
 (dolist (mode '(org-mode-hook
                 term-mode-hook
                 shell-mode-hook
-                eshell-mode-hook))
+                eshell-mode-hook
+                elpher-mode-hook
+                ement-mode-hook))
   (add-hook mode (lambda () (display-line-numbers-mode 0))))
 
 ;; Package Management Config -------------------------------------------
@@ -287,6 +291,16 @@ cursor into the new window"
 ;;  key is to use electric-pair-mode)
 (add-hook 'prog-mode-hook 'electric-pair-mode)
 
+
+; Unicode Fonts -------------------------------------------------------
+(use-package unicode-fonts
+   :ensure t
+   :config
+   (unicode-fonts-setup))
+
+(set-fontset-font t 'symbol "Noto Color Emoji" nil)
+(set-fontset-font t 'symbol "Symbola" nil 'append)
+
 ;; Custom Functions and Commands ---------------------------------------
 
 ;; Add command for killing all buffers
@@ -349,12 +363,12 @@ cursor into the new window"
 
 
 ;; DAP Config ----------------------------------------------------------
-(use-package dap-mode
-  :config
-  (require 'dap-node)
-  (dap-node-setup)
-  (require 'dap-firefox)
-  (require 'dap-chrome))
+;; (use-package dap-mode
+;;   :config
+;;   (require 'dap-node)
+;;   (dap-node-setup)
+;;   (require 'dap-firefox)
+;;   (require 'dap-chrome))
 
 ;; Company Mode Config -------------------------------------------------
 (use-package company
@@ -374,31 +388,32 @@ cursor into the new window"
 (add-hook 'lisp-mode-hook 'show-paren-mode)
 
 ;; Slime config --------------------------------------------------------
-(defun eg/setup-slime-keybindings ()
-  "For use in slime-repl-mode-hook for
-fixing clashing windmove keybindings"
-  (define-key slime-repl-mode-map (kbd "C-<down>") 'windmove-down)
-  (define-key slime-repl-mode-map (kbd "C-<up>") 'windmove-up)
-  (define-key slime-repl-mode-map (kbd "C-<right>") 'windmove-right)
-  (define-key slime-repl-mode-map (kbd "C-<left>") 'windmove-left)
-  (define-key slime-repl-mode-map (kbd "S-C-<up>") 'slime-repl-previous-input)
-  (define-key slime-repl-mode-map (kbd "S-C-<down>") 'slime-repl-next-input))
+;; (defun eg/setup-slime-keybindings ()
+;;   "For use in slime-repl-mode-hook for
+;; fixing clashing windmove keybindings"
+;;   (define-key slime-repl-mode-map (kbd "C-<down>") 'windmove-down)
+;;   (define-key slime-repl-mode-map (kbd "C-<up>") 'windmove-up)
+;;   (define-key slime-repl-mode-map (kbd "C-<right>") 'windmove-right)
+;;   (define-key slime-repl-mode-map (kbd "C-<left>") 'windmove-left)
+;;   (define-key slime-repl-mode-map (kbd "S-C-<up>") 'slime-repl-previous-input)
+;;   (define-key slime-repl-mode-map (kbd "S-C-<down>") 'slime-repl-next-input))
 
-(use-package slime
-  :custom (inferior-lisp-program "sbcl")
-  :init
-  (load (expand-file-name "~/quicklisp/slime-helper.el")))
+;; (use-package slime
+;;   :custom (inferior-lisp-program "sbcl")
+;;   :init
+;;   (load (expand-file-name "~/quicklisp/slime-helper.el")))
 
-;;(add-hook 'slime-mode-hook #'eg/setup-slime-keybindings)
-(add-hook 'slime-repl-mode-hook #'eg/setup-slime-keybindings)
+;; ;;(add-hook 'slime-mode-hook #'eg/setup-slime-keybindings)
+;; (add-hook 'slime-repl-mode-hook #'eg/setup-slime-keybindings)
 
-;; Add auto-mode for lisp files
-(add-to-list 'auto-mode-alist '("\\.cl$" . common-lisp-mode))
-(add-to-list 'auto-mode-alist '("\\.lisp$" . lisp-mode))
+;; ;; Add auto-mode for lisp files
+;; (add-to-list 'auto-mode-alist '("\\.cl$" . common-lisp-mode))
+;; (add-to-list 'auto-mode-alist '("\\.lisp$" . lisp-mode))
 
 
 ;; Scheme Config (Geiser) ----------------------------------------------
 (use-package geiser)
+(use-package geiser-guile)
 
 ;; Dired Mode Config ---------------------------------------------------
 (define-key dired-mode-map [mouse-2] 'dired-mouse-find-file)
@@ -435,7 +450,7 @@ fixing clashing windmove keybindings"
 rcirc authinfo list for Freenode"
   (interactive)
   (customize-save-variable 'eg/irc-password (read-passwd "Enter Libera pass: "))
-  (customize-save-variable 'rcirc-authinfo '(("libera" nickserv "darth-cheney" eg/irc-password)))
+  (customize-save-variable 'rcirc-authinfo `(("libera" nickserv "darth-cheney" ,eg/irc-password)))
   (customize-save-variable 'rcirc-default-nick "darth-cheney"))
 
 (if (not (boundp 'eg/irc-password))
@@ -443,6 +458,11 @@ rcirc authinfo list for Freenode"
       (defcustom eg/irc-password nil "Default password to use for IRC connections")
       (call-interactively 'eg/get-irc-password)))
 ;;(put 'erase-buffer 'disabled nil)
+
+;; Elpher Config -------------------------------------------------------
+(use-package elpher
+  :custom-face
+  (fixed-width ((t :family "Fira Sans"))))
 
 ;; Org Mode Config -----------------------------------------------------
 (defun eg/org-mode-setup ()
@@ -529,8 +549,9 @@ rcirc authinfo list for Freenode"
   (make-directory "~/Documents/org-roam" t)
   :custom
   (org-roam-directory "~/Documents/org-roam")
-  :hook
-  ((after-init . org-roam-mode)))
+  ;; :hook
+  ;; ((after-init . org-roam-mode))
+  )
 
 ;; Projectile Config ---------------------------------------------------
 (use-package projectile
@@ -544,6 +565,12 @@ rcirc authinfo list for Freenode"
   (when (file-directory-p "~/projects")
     (setq projectile-project-search-path '("~/projects")))
   (setq projectile-switch-project-action #'projectile-dired))
+
+
+;; Custom Key Bindings -------------------------------------------------
+(bind-keys
+ ("s-=" . text-scale-increase)
+ ("s-\-" . text-scale-decrease))
 
 ;; Additional Custom Functions -----------------------------------------
 (load "~/.emacs.d/eric-functions.el")
