@@ -6,9 +6,31 @@
 (setq custom-file (concat user-emacs-directory "/custom.el"))
 (load-file custom-file)
 
+;; Tells us if this system is a mac or not
+(defconst *is-a-mac* (eq system-type 'darwin))
+
+;; For Macs Big Sur and above, we need to explicitly set
+;; the environment so that it points to libgccjit. This
+;; is because of how the Finder and Spotlight launch apps.
+;; You will encounter jit warnings/errors without it when
+;; starting from the Finder or Spotlight (launching from
+;; the command line should work fine either way)
+;; (if *is-a-mac*
+;;     #t)
+
+(setenv "LIBRARY_PATH"
+        (string-join
+         '("/usr/local/opt/gcc/lib/gcc/11"
+           "/usr/local/opt/libgccjit/lib/gcc/11"
+           "/usr/local/opt/gcc/lib/gcc/11/gcc/x86_64-apple-darwin20"
+           ) ":"))
+
 ;; My default fontsize
 (defvar eric-custom/default-font-size 130)
 (set-face-attribute 'default nil :font "Fira Code" :height 132)
+(if *is-a-mac*
+    (set-face-attribute 'default nil :font "Fira Code" :height 140))
+
 
 ;;(if (equal (system-name) "reform")
 ;;    (set-face-attribute 'default nil :font "Iosevka Term" :height 140))
@@ -313,7 +335,6 @@ cursor into the new window"
 
 ;; Misc Settings ------------------------------------------------------
 (defconst *spell-check-support-enabled* nil) ;; Enable with t if you prefer
-(defconst *is-a-mac* (eq system-type 'darwin))
 
 ;; Deal with  TLS1.3 Bug that seems to affect Melpa?
 (setq gnutls-algorithm-priority "NORMAL:-VERS-TLS1.3")
@@ -343,6 +364,9 @@ cursor into the new window"
   :config (
                                         ;(add-to-list 'auto-mode-alist '("\\.html?\\'" . web-mode))
            ))
+
+;; Lua Mode
+(use-package lua-mode)
 
 ;; LSP Config ----------------------------------------------------------
 ;; (defun eg/lsp-mode-setup ()
