@@ -345,21 +345,24 @@ cursor into the new window"
            ))
 
 ;; LSP Config ----------------------------------------------------------
-(defun eg/lsp-mode-setup ()
-  (setq lsp-headerline-breadcrumb-segments '(path-up-to-project file symbols))
-  (lsp-headerline-breadcrumb-mode)
-  (lsp-deferred))
-(use-package lsp-mode
-  :commands (lsp lsp-deferred)
-  :hook ((js2-mode . eg/lsp-mode-setup))
-  :init
-  (setq lsp-keymap-prefix "C-c l")
-  :config
-  (lsp-enable-which-key-integration t))
+;; (defun eg/lsp-mode-setup ()
+;;   (setq lsp-headerline-breadcrumb-segments '(path-up-to-project file symbols))
+;;   (lsp-headerline-breadcrumb-mode)
+;;   (lsp-deferred))
+;; (use-package lsp-mode
+;;   :commands (lsp lsp-deferred)
+;;   :hook ((js2-mode . eg/lsp-mode-setup))
+;;   :init
+;;   (setq lsp-keymap-prefix "C-c l")
+;;   :config
+;;   (lsp-enable-which-key-integration t))
+
+;; Using Eglot Instead!
+(use-package eglot)
 
 ;; LSP ivy integration allows things like jumping
 ;; to definitions in a file from a list
-(use-package lsp-ivy)
+;;(use-package lsp-ivy)
 
 
 ;; DAP Config ----------------------------------------------------------
@@ -372,11 +375,11 @@ cursor into the new window"
 
 ;; Company Mode Config -------------------------------------------------
 (use-package company
-  :after lsp-mode
-  :hook (lsp-mode . company-mode)
+  ;:after lsp-mode
+  ;:hook (lsp-mode . company-mode)
   :bind (:map company-active-map
               ("<tab>" . company-complete-selection))
-  (:map lsp-mode-map ("<tab>" . company-indent-or-complete-common))
+  ;(:map lsp-mode-map ("<tab>" . company-indent-or-complete-common))
   :custom
   (company-minimum-prefix-length 1)
   (company-idle-delay 0.0))
@@ -414,6 +417,15 @@ cursor into the new window"
 ;; Scheme Config (Geiser) ----------------------------------------------
 (use-package geiser)
 (use-package geiser-guile)
+
+;; Dart Language Config
+;; ---------------------------------------------------------------------
+(use-package dart-mode
+  ;; :hook (dart-mode . lsp)
+  )
+
+;;(use-package lsp-dart)
+;;(use-package lsp-treemacs)
 
 ;; Dired Mode Config ---------------------------------------------------
 (define-key dired-mode-map [mouse-2] 'dired-mouse-find-file)
@@ -523,6 +535,7 @@ rcirc authinfo list for Freenode"
 
 (setq org-agenda-restore-windows-after-quit t)
 (setq org-agenda-skip-unavailable-files t)
+(setq org-agenda-files '("~/Sync/primary-agenda.org"))
 
 ;; Org Journal Config --------------------------------------------------
 (use-package org-journal)
