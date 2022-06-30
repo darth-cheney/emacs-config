@@ -18,12 +18,12 @@
 ;; (if *is-a-mac*
 ;;     #t)
 
-(setenv "LIBRARY_PATH"
-        (string-join
-         '("/usr/local/opt/gcc/lib/gcc/11"
-           "/usr/local/opt/libgccjit/lib/gcc/11"
-           "/usr/local/opt/gcc/lib/gcc/11/gcc/x86_64-apple-darwin20"
-           ) ":"))
+;;(setenv "LIBRARY_PATH"
+;;        (string-join
+;;         '("/usr/local/opt/gcc/lib/gcc/11"
+;;           "/usr/local/opt/libgccjit/lib/gcc/11"
+;;           "/usr/local/opt/gcc/lib/gcc/11/gcc/x86_64-apple-darwin20"
+;;           ) ":"))
 
 ;; My default fontsize
 (defvar eric-custom/default-font-size 130)
@@ -56,6 +56,8 @@
                 shell-mode-hook
                 eshell-mode-hook
                 elpher-mode-hook
+                dired-mode-hook
+                markdown-mode-hook
                 ement-mode-hook))
   (add-hook mode (lambda () (display-line-numbers-mode 0))))
 
@@ -343,8 +345,19 @@ cursor into the new window"
 ;; Language Specific Configs ------------------------------------------
 
 ;; |----------------------|
-;; | Javascript           |
+;; | Javascript/JSX       |
 ;; |----------------------|
+(defun eg/rjsx-mode-hook ()
+    (js2-minor-mode)
+    (company-mode)
+    (eglot-ensure))
+
+(use-package rjsx-mode
+  :hook (rjsx-mode . eg/rjsx-mode-hook))
+
+(add-to-list 'auto-mode-alist '("\\.jsx?$" . rjsx-mode))
+
+
 (defun eg/js2-mode-hook ()
   (progn
     (setq mode-name "JS2")))
@@ -361,12 +374,20 @@ cursor into the new window"
 ;; | HTML / Web           |
 ;; |----------------------|
 (use-package web-mode
-  :config (
-                                        ;(add-to-list 'auto-mode-alist '("\\.html?\\'" . web-mode))
-           ))
+  :hook (web-mode . eg/web-mode-hook))
+(add-to-list 'auto-mode-alist '("\\.html?\\'" . web-mode))
+;;(add-to-list 'auto-mode-alist '("\\.jsx?$" . web-mode)) ;; auto-enable for .js/.jsx files
+;;(setq web-mode-content-types-alist '(("jsx" . "\\.js[x]?\\'")))
+
+(use-package sass-mode)
+(add-to-list 'auto-mode-alist '("\\.scss?\\'" . sass-mode))
 
 ;; Lua Mode
 (use-package lua-mode)
+
+
+;; Markdown Support ----------------------------------------------------
+(use-package markdown-mode)
 
 ;; LSP Config ----------------------------------------------------------
 ;; (defun eg/lsp-mode-setup ()
