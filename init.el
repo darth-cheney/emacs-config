@@ -342,11 +342,50 @@ cursor into the new window"
 (setq gnutls-algorithm-priority "NORMAL:-VERS-TLS1.3")
 
 
+;; Tree Sitter --------------------------------------------------------
+;; Adapted from: https://vxlabs.com/2022/06/12/typescript-development-with-emacs-tree-sitter-and-lsp-in-2022/
+(use-package tree-sitter
+  :ensure t
+  :config
+  (global-tree-sitter-mode)
+  (add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode))
+
+(use-package tree-sitter-langs
+  :ensure t
+  :after tree-sitter)
+
+;; Typescript Configs -------------------------------------------------
+(use-package typescript-mode
+  :after tree-sitter
+  :config
+  (define-derived-mode typescriptreact-mode typescript-mode "TypeScript TSX")
+  ;; Use the derived mode for tsx files
+  (add-to-list 'auto-mode-alist '("\\.tsx?\\'" . typescriptreact-mode))
+  (add-to-list 'tree-sitter-major-mode-language-alist '(typescriptreact-mode . tsx)))
+
+;; (defun eg/tide-setup-hook ()
+;;   (flycheck-mode 1)
+;;   (tide-setup)
+;;   (eldoc-mode))
+
+;; (use-package tide)
+
+;; (add-hook 'rjsx-mode-hook 'eg/tide-setup-hook)
+;; (add-hook 'web-mode-hook 'eg/tide-setup-hook
+;;           (lambda () (pcase (file-name-extension buffer-file-name)
+;;                        ("tsx" (eg/tide-setup-hook)))))
+
+
 ;; Language Specific Configs ------------------------------------------
 
 ;; |----------------------|
 ;; | Javascript/JSX       |
 ;; |----------------------|
+(use-package prettier-js
+  :hook ((js2-mode . prettier-js-mode)
+         (web-mode . prettier-js-mode)
+         (typescript-mode . prettier-js-mode)))
+
 (defun eg/rjsx-mode-hook ()
     (js2-minor-mode)
     (company-mode)
@@ -373,6 +412,8 @@ cursor into the new window"
 ;; |----------------------|
 ;; | HTML / Web           |
 ;; |----------------------|
+(defun eg/web-mode-hook ()
+  )
 (use-package web-mode
   :hook (web-mode . eg/web-mode-hook))
 (add-to-list 'auto-mode-alist '("\\.html?\\'" . web-mode))
