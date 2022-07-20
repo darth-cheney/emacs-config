@@ -33,7 +33,10 @@ Set us up to use `straight.el` as the main package manager
 
 Install `use-package` for package configuration
 #+begin_src emacs-lisp
-(straight-use-package 'use-package)
+  (straight-use-package 'use-package)
+;; Configure use-package to use straight.el by default
+(use-package straight
+             :custom (straight-use-package-by-default t))
 #+end_src
 
 ** Preamble
@@ -93,24 +96,25 @@ Ignore Common Lisp deprecation warnings
 ** Comprehensive UI Settings
 These initial defaults have been taken from an old config. Consider modifying and/or removing as needed.
 #+begin_src emacs-lisp
-(setq-default
- blink-cursor-interval 0.4
- bookmark-default-file (expand-file-name ".bookmarks.el" user-emacs-directory)
- buffers-menu-max-size 30
- case-fold-search t
- column-number-mode t
- delete-selection-mode t
- ediff-split-window-function 'split-window-horizontally
- ediff-window-setup-function 'ediff-setup-windows-plain
- indent-tabs-mode nil
- make-backup-files nil
- mouse-yank-at-point t
- save-interprogram-paste-before-kill t
- scroll-preserve-screen-position 'always
- set-mark-command-repeat-pop t
- tooltip-delay 1.5
- truncate-lines nil
- truncate-partial-width-windows nil)
+  (setq-default
+   blink-cursor-interval 0.4
+   bookmark-default-file (expand-file-name ".bookmarks.el" user-emacs-directory)
+   buffers-menu-max-size 30
+   case-fold-search t
+   cursor-type 'box
+   column-number-mode t
+   delete-selection-mode t
+   ediff-split-window-function 'split-window-horizontally
+   ediff-window-setup-function 'ediff-setup-windows-plain
+   indent-tabs-mode nil
+   make-backup-files nil
+   mouse-yank-at-point t
+   save-interprogram-paste-before-kill t
+   scroll-preserve-screen-position 'always
+   set-mark-command-repeat-pop t
+   tooltip-delay 1.5
+   truncate-lines nil
+   truncate-partial-width-windows nil)
 #+end_src
 
 *** Opacity Related Settings
@@ -149,6 +153,16 @@ Use Unicode fonts so that we can have civilized text.
 (set-fontset-font t 'symbol "Symbola" nil 'append)
 #+end_src
 
+** Text Encoding
+Use utf-8 as much as possible
+(taken from https://github.com/rougier/dotemacs/blob/master/dotemacs.org)
+#+begin_src emacs-lisp
+(set-default-coding-systems 'utf-8)     ; Default to utf-8 encoding
+(prefer-coding-system       'utf-8)     ; Add utf-8 at the front for automatic detection.
+(set-terminal-coding-system 'utf-8)     ; Set coding system of terminal output
+(set-keyboard-coding-system 'utf-8)     ; Set coding system for keyboard input on TERMINAL
+(set-language-environment "English")    ; Set up multilingual environment
+#+end_src
 ** Custom Commands
 Commands that I have written for personal use.
 
@@ -180,7 +194,28 @@ This command kills all buffers period.
   (delete-other-windows))
 #+end_src
 
+** Themes
+Load the DOOM Themes, which are nice defaults. Note that we have _disabled_ the default loading of the challenger-deep theme for now.
+#+begin_src emacs-lisp
+  ;(use-package doom-themes
+           ;;:init (load-theme 'doom-challenger-deep t)
+           ;)
+#+end_src
 
+Load the NANO theme
+#+begin_src emacs-lisp
+    (use-package nano-theme
+      :ensure nil
+      :defer t
+      :straight '(nano-theme :type git :host github :repo "rougier/nano-theme"))
+  (setq nano-fonts-use t)
+  (with-eval-after-load "nano-light"
+      (setq-default cursor-type 'box))
+  (with-eval-after-load "nano-dark"
+      (setq-default cursor-type 'box))
+  (load-theme 'nano-light t)
+  ;;(nano-light)
+#+end_src
 ** Modeline Setup
 
 Use the DOOM Modeline (currently _INACTIVE_)
@@ -190,14 +225,146 @@ Use the DOOM Modeline (currently _INACTIVE_)
 ;; 	    :custom ((doom-modeline-height 40)))
 #+end_src
 
-** Themes
-Load the DOOM Themes, which are nice defaults. Note that we have _disabled_ the default loading of the challenger-deep theme for now.
+Use the NANO modeline
 #+begin_src emacs-lisp
-  (use-package doom-themes
-           ;;:init (load-theme 'doom-challenger-deep t)
-           )
+  (use-package nano-modeline
+    :straight '(nano-modeline :type git :host github :repo "rougier/nano-modeline"))
 #+end_src
 
+Use the following nano-modeline settings, taken from
+https://raw.githubusercontent.com/rougier/dotemacs/master/dotemacs.org
+#+begin_src emacs-lisp
+(setq nano-modeline-prefix 'status)
+(setq nano-modeline-prefix-padding 1)
+
+(set-face-attribute 'header-line nil)
+(set-face-attribute 'mode-line nil
+                    :foreground (face-foreground 'nano-subtle-i)
+                    :background (face-foreground 'nano-subtle-i)
+                    :inherit nil
+                    :box nil)
+(set-face-attribute 'mode-line-inactive nil
+                    :foreground (face-foreground 'nano-subtle-i)
+                    :background (face-foreground 'nano-subtle-i)
+                    :inherit nil
+                    :box nil)
+
+(set-face-attribute 'nano-modeline-active nil
+                    :underline (face-foreground 'nano-default-i)
+                    :background (face-background 'nano-subtle)
+                    :inherit '(nano-default-)
+                    :box nil)
+(set-face-attribute 'nano-modeline-inactive nil
+                    :foreground 'unspecified
+                    :underline (face-foreground 'nano-default-i)
+                    :background (face-background 'nano-subtle)
+                    :box nil)
+
+(set-face-attribute 'nano-modeline-active-name nil
+                    :foreground "black"
+                    :inherit '(nano-modeline-active nano-strong))
+(set-face-attribute 'nano-modeline-active-primary nil
+                    :inherit '(nano-modeline-active))
+(set-face-attribute 'nano-modeline-active-secondary nil
+                    :inherit '(nano-faded nano-modeline-active))
+
+(set-face-attribute 'nano-modeline-active-status-RW nil
+                    :inherit '(nano-faded-i nano-strong nano-modeline-active))
+(set-face-attribute 'nano-modeline-active-status-** nil
+                    :inherit '(nano-popout-i nano-strong nano-modeline-active))
+(set-face-attribute 'nano-modeline-active-status-RO nil
+                    :inherit '(nano-default-i nano-strong nano-modeline-active))
+
+(set-face-attribute 'nano-modeline-inactive-name nil
+                    :inherit '(nano-faded nano-strong
+                               nano-modeline-inactive))
+(set-face-attribute 'nano-modeline-inactive-primary nil
+                    :inherit '(nano-faded nano-modeline-inactive))
+
+(set-face-attribute 'nano-modeline-inactive-secondary nil
+                    :inherit '(nano-faded nano-modeline-inactive))
+(set-face-attribute 'nano-modeline-inactive-status-RW nil
+                    :inherit '(nano-modeline-inactive-secondary))
+(set-face-attribute 'nano-modeline-inactive-status-** nil
+                    :inherit '(nano-modeline-inactive-secondary))
+(set-face-attribute 'nano-modeline-inactive-status-RO nil
+                    :inherit '(nano-modeline-inactive-secondary))
+#+end_src
+
+Custom hook for styling the modeline as a thin line.
+Taken from ()
+#+begin_src emacs-lisp
+  (defun my/thin-modeline ()
+    "Transform the modeline in a thin faded line"
+  
+    (nano-modeline-face-clear 'mode-line)
+    (nano-modeline-face-clear 'mode-line-inactive)
+    (setq mode-line-format (list ""))
+    (setq-default mode-line-format (list ""))
+    (set-face-attribute 'mode-line nil
+                        :box nil
+                        :inherit nil
+                        :foreground (face-background 'nano-subtle)
+                        :background (face-background 'nano-subtle)
+                        :height 0.1)
+    (set-face-attribute 'mode-line-inactive nil
+                        :box nil
+                        :inherit nil
+                        :foreground (face-background 'nano-subtle)
+                        :background (face-background 'nano-subtle)
+                        :height 0.1))
+
+  (add-hook 'nano-modeline-mode-hook #'my/thin-modeline)
+(nano-modeline-mode 1)
+#+end_src
+** Minibuffer Settings
+Taken from (https://github.com/rougier/dotemacs/blob/master/dotemacs.org)
+#+begin_src emacs-lisp
+(defun my/minibuffer-header ()
+  "Minibuffer header"
+  
+  (let ((depth (minibuffer-depth)))
+    (concat
+     (propertize (concat "  " (if (> depth 1)
+                                   (format "Minibuffer (%d)" depth)
+                                 "Minibuffer ")
+                         "\n")
+                 'face `(:inherit (nano-subtle nano-strong)
+                         :box (:line-width (1 . 3)
+                               :color ,(face-background 'nano-subtle)
+                               :style flat)
+                         :extend t)))))
+#+end_src
+
+Setup minibuffer with the custom header line
+#+begin_src emacs-lisp
+  (defun my/minibuffer-setup ()
+    "Install a header line in the minibuffer via an overlay (and a hook)"
+  
+    (set-window-margins nil 0 0)
+    (set-fringe-style '(0 . 0))
+    (cursor-intangible-mode t)
+    (face-remap-add-relative 'default
+                             :inherit 'highlight)
+   (let* ((overlay (make-overlay (+ (point-min) 0) (+ (point-min) 0)))
+          (inhibit-read-only t))
+
+      (save-excursion
+        (goto-char (point-min))
+        (insert (propertize
+                 (concat (my/minibuffer-header)
+                         (propertize "\n" 'face `(:height 0.33))
+                         (propertize " "))
+                 'cursor-intangible t
+                 'read-only t
+                 'field t
+                 'rear-nonsticky t
+                 'front-sticky t)))))
+
+
+(add-hook 'minibuffer-setup-hook #'my/minibuffer-setup)
+(add-hook 'load-theme-hook #'my/minibuffer-setup)
+#+end_src
 ** Ivy Configuration
 Use Ivy as the completion frontend
 #+begin_src emacs-lisp
@@ -240,7 +407,6 @@ We use Counsel in combination with Ivy in order to have a rich completion interf
 	     :config
 	     (setq which-key-idle-delay 1))
 #+end_src
-
 
 ** Icons and other Graphical Flourishes
 All the Icons provides a great set of icons for the UI. Note that you will need to run `M-x all-the-icons-install-fonts` interactively when you first load a fresh configuration.
@@ -347,7 +513,6 @@ Use Beacon to light the way
   :custom ((beacon-lighter "")
 	   (beacon-size 20)))
 #+end_src
-
 
 ** Magit Settings
 Ensure that Magit shows in full frames (this is much better)
@@ -642,7 +807,14 @@ We provide a host of over custom functions in a separate file
 
 
 ** Finally
-** IRC Settings
+Enable `nano-mode`, if it's available
+#+begin_src emacs-lisp
+(nano-mode)
+#+end_src
+
+Set the default cursor for all buffers and frames to be a box
+(setq-default cursor-type 'box)
+*** IRC Settings
 I use a custom interactive function to get my IRC password at startup. It is then saved in a custom variable for future sessions. Or at least, that was the idea. For some reason it asks every time I start Emacs...
 #+begin_src emacs-lisp
 (defun eg/get-irc-password ()
@@ -658,3 +830,4 @@ rcirc authinfo list for Freenode"
       (defcustom eg/irc-password nil "Default password to use for IRC connections")
       (call-interactively 'eg/get-irc-password)))
 #+end_src
+
