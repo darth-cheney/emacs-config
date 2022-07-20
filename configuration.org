@@ -1,0 +1,660 @@
+#+TITLE: Emacs Literatie Configuration
+#+AUTHOR: Eric Gade (darth-cheney)
+#+STARTUP: show2levels indent hidestars
+#+PROPERTY: header-args :tangle "~/.emacs.d/init.el"
+
+** Early Init Settings
+:PROPERTIES:
+:header-args:emacs-lisp: :tangle "~/.emacs.d/early-init.el"
+:END:
+
+The following code will be placed into the [[file:early.init.el][early-init.el]]. This mostly deals with setting `straight.el` as the default package manager.
+
+#+begin_src emacs-lisp
+(setq package-enable-at-startup nil)
+#+end_src
+
+** Package Management
+Set us up to use `straight.el` as the main package manager
+#+begin_src emacs-lisp
+(defvar bootstrap-version)
+(let ((bootstrap-file
+       (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
+      (bootstrap-version 5))
+  (unless (file-exists-p bootstrap-file)
+    (with-current-buffer
+        (url-retrieve-synchronously
+         "https://raw.githubusercontent.com/raxod502/straight.el/develop/install.el"
+         'silent 'inhibit-cookies)
+      (goto-char (point-max))
+      (eval-print-last-sexp)))
+  (load bootstrap-file nil 'nomessage))
+#+end_src
+
+Install `use-package` for package configuration
+#+begin_src emacs-lisp
+(straight-use-package 'use-package)
+#+end_src
+
+** Preamble
+Put custom defined variables in a separate file and load that file if it's there.
+
+#+begin_src emacs-lisp
+(setq custom-file (concat user-emacs-directory "/custom.el"))
+(load-file custom-file)
+#+end_src
+
+Tell us if the system is a Mac or not
+#+begin_src emacs-lisp
+(defconst *is-a-mac* (eq system-type 'darwin))
+#+end_src
+
+Set default font and size based on the system being used (currently _INACTIVE_)
+#+begin_src emacs-lisp
+;; (defvar eric-custom/default-font-size 130)
+;; (set-face-attribute 'default nil :font "Fira Code" :height 132)
+;; (if *is-a-mac*
+;;     (set-face-attribute 'default nil :font "Fira Code" :height 140))
+#+end_src
+
+Ignore Common Lisp deprecation warnings
+#+begin_src emacs-lisp
+(setq byte-compile-warnings '(cl-functions))
+#+end_src
+
+** Basic UI Settings
+#+begin_src emacs-lisp
+  (scroll-bar-mode -1)      ; Disable visible scrollbar
+  (tool-bar-mode -1)         ; Disable the toolbar
+  (tooltip-mode -1)            ; Disable tooltips
+  (set-fringe-mode 10)      ; Give some breathing room
+  (menu-bar-mode -1)      ; Disable the menu bar
+
+  (column-number-mode)
+  (global-display-line-numbers-mode t) ;; Display line numbers globally
+
+  ;; Disable line numbering in these modes:
+  (dolist (mode '(org-mode-hook
+                  term-mode-hook
+                  shell-mode-hook
+                  eshell-mode-hook
+                  elpher-mode-hook
+                  dired-mode-hook
+                  markdown-mode-hook
+                  ement-mode-hook))
+    (add-hook mode (lambda () (display-line-numbers-mode 0))))
+
+(defconst *spell-check-support-enabled* nil) ;; Enable with t if you prefer
+
+;; Deal with  TLS1.3 Bug that seems to affect Melpa?
+(setq gnutls-algorithm-priority "NORMAL:-VERS-TLS1.3")
+#+end_src
+
+** Comprehensive UI Settings
+These initial defaults have been taken from an old config. Consider modifying and/or removing as needed.
+#+begin_src emacs-lisp
+(setq-default
+ blink-cursor-interval 0.4
+ bookmark-default-file (expand-file-name ".bookmarks.el" user-emacs-directory)
+ buffers-menu-max-size 30
+ case-fold-search t
+ column-number-mode t
+ delete-selection-mode t
+ ediff-split-window-function 'split-window-horizontally
+ ediff-window-setup-function 'ediff-setup-windows-plain
+ indent-tabs-mode nil
+ make-backup-files nil
+ mouse-yank-at-point t
+ save-interprogram-paste-before-kill t
+ scroll-preserve-screen-position 'always
+ set-mark-command-repeat-pop t
+ tooltip-delay 1.5
+ truncate-lines nil
+ truncate-partial-width-windows nil)
+#+end_src
+
+*** Opacity Related Settings
+In the end, the following keybindings will be available:
+| M-C-8 | Decrease opacity   |
+| M-C-9 | Increase opacity   |
+| M-C-7 | Set opacity to 100 |
+
+#+begin_src emacs-lisp
+(defun sanityinc/adjust-opacity (frame incr)
+  "Adjust the background opacity of FRAME by increment INCR."
+  (unless (display-graphic-p frame)
+    (error "Cannot adjust opacity of this frame"))
+  (let* ((oldalpha (or (frame-parameter frame 'alpha) 100))
+         ;; The 'alpha frame param became a pair at some point in
+         ;; emacs 24.x, e.g. (100 100)
+         (oldalpha (if (listp oldalpha) (car oldalpha) oldalpha))
+         (newalpha (+ incr oldalpha)))
+    (when (and (<= frame-alpha-lower-limit newalpha) (>= 100 newalpha))
+      (modify-frame-parameters frame (list (cons 'alpha newalpha))))))
+
+(global-set-key (kbd "M-C-8") (lambda () (interactive) (sanityinc/adjust-opacity nil -2)))
+(global-set-key (kbd "M-C-9") (lambda () (interactive) (sanityinc/adjust-opacity nil 2)))
+(global-set-key (kbd "M-C-7") (lambda () (interactive) (modify-frame-parameters nil `((alpha . 100)))))
+#+end_src
+
+*** Font Settings
+Use Unicode fonts so that we can have civilized text.
+#+begin_src emacs-lisp
+(use-package unicode-fonts
+   :ensure t
+   :config
+   (unicode-fonts-setup))
+
+(set-fontset-font t 'symbol "Noto Color Emoji" nil)
+(set-fontset-font t 'symbol "Symbola" nil 'append)
+#+end_src
+
+** Custom Commands
+Commands that I have written for personal use.
+
+This command will kill all /other/ (meaning non-current) buffers.
+#+begin_src emacs-lisp
+(defun eg/is-current-buffer (buff)
+  "Respond true if the given buffer is the current buffer"
+  (eq buff (current-buffer)))
+
+(defun eg/get-all-non-current-buffers ()
+  "Return a list of all current buffers aside from the current one"
+  (seq-filter '(lambda (buff)
+                 (not (eg/is-current-buffer buff)))
+              (buffer-list)))
+
+(defun kill-other-buffers ()
+  "Kill all open buffers aside from the current one"
+  (interactive)
+  (mapcar 'kill-buffer (eg/get-all-non-current-buffers))
+  (delete-other-windows))
+#+end_src
+
+This command kills all buffers period.
+#+begin_src emacs-lisp
+(defun kill-all-buffers ()
+  "Kill all open buffers."
+  (interactive)
+  (mapc 'kill-buffer (buffer-list))
+  (delete-other-windows))
+#+end_src
+
+
+** Modeline Setup
+
+Use the DOOM Modeline (currently _INACTIVE_)
+#+begin_src emacs-lisp
+;; (use-package doom-modeline
+;; 	    :init (doom-modeline-mode 1)
+;; 	    :custom ((doom-modeline-height 40)))
+#+end_src
+
+** Themes
+Load the DOOM Themes, which are nice defaults. Note that we have _disabled_ the default loading of the challenger-deep theme for now.
+#+begin_src emacs-lisp
+  (use-package doom-themes
+           ;;:init (load-theme 'doom-challenger-deep t)
+           )
+#+end_src
+
+** Ivy Configuration
+Use Ivy as the completion frontend
+#+begin_src emacs-lisp
+(use-package ivy
+	     :diminish
+	     :bind (("C-s" . swiper)
+		    :map ivy-minibuffer-map
+		    ("TAB" . ivy-alt-done)
+		    ("C-k" . ivy-next-line)
+		    ("C-j" . ivy-previous-line))
+	     :config
+	     (ivy-mode 1))
+
+(use-package ivy-rich
+	     :init
+	     (ivy-rich-mode 1))
+#+end_src
+
+Smex shows the most recently-used commands at the top of the minibuffer when executing interactively.
+#+begin_src emacs-lisp
+(use-package smex)
+#+end_src
+
+** Counsel Settings
+We use Counsel in combination with Ivy in order to have a rich completion interface in the minibuffer.
+#+begin_src emacs-lisp
+(use-package counsel
+	     :bind (("M-x" . counsel-M-x)
+		   ("C-x b" . counsel-switch-buffer)
+		   ("C-x C-f" . counsel-find-file)
+		   :map minibuffer-local-map
+		   ("C-r" . 'counsel-minibuffer-history)))
+
+;; Also init which-key, which helps with
+;; documentation and provides the delay before
+;; showing futher bindings
+(use-package which-key
+	     :init (which-key-mode)
+	     :diminish which-key-mode
+	     :config
+	     (setq which-key-idle-delay 1))
+#+end_src
+
+
+** Icons and other Graphical Flourishes
+All the Icons provides a great set of icons for the UI. Note that you will need to run `M-x all-the-icons-install-fonts` interactively when you first load a fresh configuration.
+#+begin_src emacs-lisp
+(use-package all-the-icons)
+#+end_src
+
+** Hydra Settings
+The use of Hydra is currently _INACTIVE_.
+#+begin_src emacs-lisp
+;; (use-package hydra)
+#+end_src
+
+** Helpful (the package) Settings
+Helpful is a better help interface that interacts with the built-in Emacs documentation. It is especially powerful when used with Ivy/Counsel.
+#+begin_src emacs-lisp
+(use-package helpful
+	     :custom
+	     (counsel-describe-function-function #'helpful-callable)
+	     (counsel-describe-variable-function #'helpful-variable)
+	     :bind
+	     ([remap describe-function] . counsel-describe-function)
+	     ([remap describe-command] . helpful-command)
+	     ([remap describe-variable] . counsel-describe-variable)
+	     ([remap describe-key] . helpful-key))
+#+end_src
+
+** Dashboard Settings
+The Dashboard is the opening screen that you see when Emacs first opens.
+
+Using the dashboard package, we provide a customized verson of that page which shows things like the org agenda, recent files, a custom image, and buttons, etc.
+#+begin_src emacs-lisp
+(use-package dashboard
+  :ensure t
+  :config (dashboard-setup-startup-hook)
+  :custom ((dashboard-banner-logo-title "")
+	   (dashboard-startup-banner "~/.emacs.d/lamassu.png")
+	   (dashboard-center-content t)
+	   (dashboard-set-heading-icons t)
+	   (dashboard-set-file-icons t)
+	   (dashboard-set-footer nil)))
+#+end_src
+
+** Window Movement and General Keybindings
+Custom basic navigation around different windows
+#+begin_src emacs-lisp
+(global-set-key (kbd "C-<right>") 'windmove-right)
+(global-set-key (kbd "C-<left>") 'windmove-left)
+(global-set-key (kbd "C-<down>") 'windmove-down)
+(global-set-key (kbd "C-<up>") 'windmove-up)
+#+end_src
+
+Windmove has some problems by default when in terminal char mode. We have some settings to better deal with that here.
+#+begin_src emacs-lisp
+(eval-after-load "term"
+  '(progn
+     (define-key term-raw-map (kbd "C-<left>") 'windmove-left)
+     (define-key term-raw-map (kbd "C-<right>") 'windmove-right)
+     (define-key term-raw-map (kbd "C-<up>") 'windmove-up)
+     (define-key term-raw-map (kbd "C-<down>") 'windmove-down)))
+#+end_src
+
+  Dim the other (inactive) buffer windows when the cursor is not in them.
+  ,#+begin_src emacs-lisp
+  (use-package dimmer
+    :custom ((dimmer-fraction 0.45)
+             ;; :both will dim background and foreground
+             (dimmer-adjustment-mode :foreground)))
+    :config (dimmer-mode t)
+#+end_src
+
+Ensure that when we split new windows, the cursor gets automatically inserted into the new window.
+#+begin_src emacs-lisp
+(defun split-and-follow-horizontally ()
+  "Split a new window horizontally and put the
+cursor into the new window"
+  (interactive)
+  (split-window-below)
+  (balance-windows)
+  (other-window 1))
+(global-set-key (kbd "C-x 2") 'split-and-follow-horizontally)
+
+(defun split-and-follow-vertically ()
+  "Split a new window vertically and put the
+cursor into the new window"
+  (interactive)
+  (split-window-right)
+  (balance-windows)
+  (other-window 1))
+(global-set-key (kbd "C-x 3") 'split-and-follow-vertically)
+#+end_src
+
+Create keybindings for quickly increasing/decreasing the text scale in a buffer.
+#+begin_src emacs-lisp
+(bind-keys
+ ("s-=" . text-scale-increase)
+ ("s-\-" . text-scale-decrease))
+#+end_src
+
+Use Beacon to light the way
+#+begin_src emacs-lisp
+(use-package beacon
+  :init (beacon-mode 1)
+  :custom ((beacon-lighter "")
+	   (beacon-size 20)))
+#+end_src
+
+
+** Magit Settings
+Ensure that Magit shows in full frames (this is much better)
+#+begin_src emacs-lisp
+(use-package fullframe)
+#+end_src
+
+#+begin_src emacs-lisp
+(use-package magit
+  :init(fullframe magit-status magit-mode-quit-window)
+  :bind (("C-x g" . magit-status))
+  :custom ((magit-diff-refine-hunk t)))
+
+(use-package git-commit
+  :hook ((git-commit-mode . goto-address-mode)))
+#+end_src
+
+** Completion Settings
+Parenthesis and bracket autocompletion (see JS2 Setings for example of use)
+#+begin_src emacs-lisp
+(add-hook 'prog-mode-hook 'electric-pair-mode)
+#+end_src
+
+** Language Settings
+This section describes settings for specific languages, including syntax highlighting and LSP interaction.
+
+*** Tree Sitter (currently _INACTIVE_)
+/Adapted from: https://vxlabs.com/2022/06/12/typescript-development-with-emacs-tree-sitter-and-lsp-in-2022/
+#+begin_src emacs-lisp
+;;(use-package tree-sitter
+;;  :ensure t
+;;  :config
+;;  (global-tree-sitter-mode)
+;;  (add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode))
+
+;; (use-package tree-sitter-langs
+;;  :ensure t
+;;  :after tree-sitter)
+#+end_src
+
+*** Ruby Settings
+#+begin_src emacs-lisp
+(use-package rvm)
+#+end_src
+
+*** Javascript/JSX Settings
+Custom hooks for JS2 and rjsx modes
+
+#+begin_src emacs-lisp
+    (defun eg/rjsx-mode-hook ()
+        (js2-minor-mode)
+        (company-mode)
+        (eglot-ensure))
+  
+  (defun eg/js2-mode-hook ()
+    (progn
+      (setq mode-name "JS2")))
+  (use-package js2-mode
+    :hook (js2-mode . eg/js2-mode-hook)
+    :custom ((js-indent-level 4)))
+#+end_src
+
+Install JS2 mode for dealing with Javscript files
+#+begin_src elisp-mode
+(use-package js2-mode
+  :hook (js2-mode . eg/js2-mode-hook)
+  :custom ((js-indent-level 4)))
+
+(add-to-list 'auto-mode-alist '("\\.\\(js\\|es6\\)\\(\\.erb\\)?\\'" . js2-mode))
+#+end_src
+
+Install rjsx mode for dealing with JSX specifically. Note that in the custom hook we've written for this package, js2 becomes a minor mode.
+#+begin_src emacs-lisp
+(use-package rjsx-mode
+  :hook (rjsx-mode . eg/rjsx-mode-hook))
+
+(add-to-list 'auto-mode-alist '("\\.jsx?$" . rjsx-mode))
+#+end_src
+
+Use Prettier for better JS formatting
+#+begin_src emacs-lisp
+(use-package prettier-js
+  :hook ((js2-mode . prettier-js-mode)
+         (web-mode . prettier-js-mode)
+         (typescript-mode . prettier-js-mode)))
+#+end_src
+
+*** JSON Settings
+#+begin_src emacs-lisp
+(use-package json-mode)
+#+end_src
+
+*** HTML/Web Settings
+We use web-mode for editing HTML
+#+begin_src emacs-lisp
+(use-package web-mode)
+(add-to-list 'auto-mode-alist '("\\.html?\\'" . web-mode))
+#+end_src
+
+*** CSS and SASS
+#+begin_src emacs-lisp
+(use-package sass-mode)
+(add-to-list 'auto-mode-alist '("\\.scss?\\'" . sass-mode))
+#+end_src
+
+*** Markdown
+#+begin_src emacs-lisp
+(use-package markdown-mode)
+#+end_src
+
+*** Lisp Settings (including Elisp)
+Highlight parentheses when we are editing lisp files.
+#+begin_src emacs-lisp
+(add-hook 'lisp-mode-hook 'show-paren-mode)
+#+end_src
+
+Use Geiser for non-Elisp lisp modes. Here we only provide for Guile Scheme.
+#+begin_src emacs-lisp
+(use-package geiser)
+(use-package geiser-guile)
+#+end_src
+
+*** LSP Settings
+The following are the old settings for `lsp-mode`, which are currently _INACTIVE_. We have opted for `eglot-mode` instead, but preserve the old settings here for posterity in case we need to switch back.
+#+begin_src emacs-lisp
+  ;; (defun eg/lsp-mode-setup ()
+  ;;   (setq lsp-headerline-breadcrumb-segments '(path-up-to-project file symbols))
+  ;;   (lsp-headerline-breadcrumb-mode)
+  ;;   (lsp-deferred))
+  ;; (use-package lsp-mode
+  ;;   :commands (lsp lsp-deferred)
+  ;;   :hook ((js2-mode . eg/lsp-mode-setup))
+  ;;   :init
+  ;;   (setq lsp-keymap-prefix "C-c l")
+  ;;   :config
+  ;;   (lsp-enable-which-key-integration t))
+;; LSP ivy integration allows things like jumping
+;; to definitions in a file from a list
+;;(use-package lsp-ivy)
+#+end_src
+
+`eglot-mode` is the new preferred LSP interaction mode.
+#+begin_src emacs-lisp
+(use-package eglot)
+#+end_src
+
+** Company and Completions Settings
+We use `company-mode` for inline completions
+#+begin_src emacs-lisp
+(use-package company
+  :bind (:map company-active-map
+              ("<tab>" . company-complete-selection))
+  :custom
+  (company-minimum-prefix-length 1)
+  (company-idle-delay 0.0))
+#+end_src
+
+Company Box provides the completions in an overlay/modal box
+#+begin_src emacs-lisp
+(use-package company-box
+  :hook (company-mode . company-box-mode))
+#+end_src
+
+** Elpher Settings
+Elpher is a mode for dealing with Gemini and Gopher browsing
+#+begin_src emacs-lisp
+(use-package elpher
+  :custom-face
+  (fixed-width ((t :family "Fira Sans"))))
+#+end_src
+
+** Org Settings
+*** Old Settings
+The following are the `org-mode` settings I was previously using in my main config. It is currently _INACTIVE_, as I'm experimenting with more of a NANO based theme.
+
+#+begin_src emacs-lisp
+;; (defun eg/org-mode-setup ()
+;;   ;;(org-indent-mode)
+;;   (variable-pitch-mode 1)
+;;   (visual-line-mode 1)
+;;   (setq org-hide-emphasis-markers t))
+
+;; (defvar eg/org-mode-font-family "LibreBaskerville" "Font family to use in org mode. Depends on system-name (see init.el). defaults to Libre Baskerville, but will be EtBembo on Pop_OS based systems, which have a hard time rendering Libre Baskerville for some reason")
+;; (defvar eg/org-mode-font-height-factor 1.0 "Factor by which to display variable pitch fonts in Org Mode")
+;; ;; Pop_OS has some weird character issue when
+;; ;; rendering Libre Baskerville.
+;; ;; If we are using Pop_OS, use EtBembo instead
+;; ;; and increase the height factor
+;; (if (string-equal (system-name) "pop-os")
+;;     (progn
+;;       (setq eg/org-mode-font-family "EtBembo")
+;;       (setq eg/org-mode-font-height-factor 1.8)))
+
+;; (use-package org
+;;   :custom
+;;   (org-pretty-entities t)
+;;   (org-hide-emphasis-markers t)
+;;   (org-fontify-whole-heading-line t)
+;;   (org-fontify-done-headline t)
+;;   (org-fontify-quote-and-verse-blocks t)
+;;   :custom-face
+;;   (org-document-title ((t (:weight bold :height 1.5))))
+;;   (org-done ((t (:strike-through t :weight bold))))
+;;   (org-headline-done ((t (:strike-through t))))
+;;   (org-level-1 ((t (:height 1.3 :weight bold))))
+;;   (org-level-2 ((t (:height 1.2 :weight bold))))
+;;   (org-level-3 ((t (:height 1.1 :weight bold))))
+;;   (org-image-actual-width (/ (display-pixel-width) 2)))
+
+;; (add-hook
+;;  'org-mode-hook
+;;  '(lambda ()
+;;     (setq line-spacing 0.2) ;; Add more line padding for readability
+;;     ;; We set the variable pitch here because we are using semi-quoted
+;;     ;; for variables, which apparently does not work with use-package's
+;;     ;; basic :custom-face capability
+;;     (custom-set-faces `(variable-pitch ((t (:family ,eg/org-mode-font-family)))))
+;;     (variable-pitch-mode 1) ;; All fonts with variable pitch.
+;;     (text-scale-adjust 3) ;; Adjust text scale
+;;     (mapc
+;;      (lambda (face) ;; Other fonts with fixed-pitch.
+;;        (set-face-attribute face nil :inherit 'fixed-pitch))
+;;      (list 'org-code
+;;            'org-link
+;;            'org-block
+;;            'org-table
+;;            'org-verbatim
+;;            'org-block-begin-line
+;;            'org-block-end-line
+;;            'org-meta-line
+;;            'org-document-info-keyword))))
+
+;; (setq org-agenda-restore-windows-after-quit t)
+;; (setq org-agenda-skip-unavailable-files t)
+;; (setq org-agenda-files '("~/Sync/primary-agenda.org"))
+#+end_src
+
+*** Current Config
+This area is for the new org-mode config
+#+begin_src emacs-lisp
+  (use-package org
+    :custom
+    (org-pretty-entities t)
+    (org-hide-emphasis-markers t)
+    (org-fontify-whole-heading-line t)
+    (org-fontify-done-headline t)
+    (org-fontify-quote-and-verse-blocks t)
+    :custom-face
+    (org-document-title ((t (:weight bold :height 1.5))))
+    (org-done ((t (:strike-through t :weight bold))))
+    (org-headline-done ((t (:strike-through t))))
+    (org-level-1 ((t (:height 1.3 :weight bold))))
+    (org-level-2 ((t (:height 1.2 :weight bold))))
+    (org-level-3 ((t (:height 1.1 :weight bold))))
+    (org-image-actual-width (/ (display-pixel-width) 2)))
+(setq org-agenda-restore-windows-after-quit t)
+(setq org-agenda-skip-unavailable-files t)
+(setq org-agenda-files '("~/Sync/primary-agenda.org"))
+#+end_src
+
+Use `org-roam` for linked notes. We provide specific settings for the location of these notes, based on Syncthing paths
+#+begin_src emacs-lisp
+(use-package org-roam
+  :config
+  (make-directory "~/Documents/org-roam" t)
+  :custom
+  (org-roam-directory "~/Documents/org-roam")
+  )
+#+end_src
+
+** Projectile Settings
+Projectile is a package used for project management. It has many useful features, not least among them a project-wide grep within files.
+#+begin_src emacs-lisp
+(use-package projectile
+  :diminish projectile-mode
+  :config (projectile-mode)
+  :custom ((projectile-completion-system 'ivy))
+  :bind-keymap
+  ("C-c p" . projectile-command-map)
+  :init
+  ;; NOTE: Set this to the folder where you keep your Git repos!
+  (when (file-directory-p "~/projects")
+    (setq projectile-project-search-path '("~/projects")))
+  (setq projectile-switch-project-action #'projectile-dired))
+#+end_src
+
+** Load Further Custom Functions
+We provide a host of over custom functions in a separate file
+#+begin_src emacs-lisp
+(load "~/.emacs.d/eric-functions.el")
+#+end_src
+
+
+** Finally
+** IRC Settings
+I use a custom interactive function to get my IRC password at startup. It is then saved in a custom variable for future sessions. Or at least, that was the idea. For some reason it asks every time I start Emacs...
+#+begin_src emacs-lisp
+(defun eg/get-irc-password ()
+  "Set the custom irc pass variable and add it to the
+rcirc authinfo list for Freenode"
+  (interactive)
+  (customize-save-variable 'eg/irc-password (read-passwd "Enter Libera pass: "))
+  (customize-save-variable 'rcirc-authinfo `(("libera" nickserv "darth-cheney" ,eg/irc-password)))
+  (customize-save-variable 'rcirc-default-nick "darth-cheney"))
+
+(if (not (boundp 'eg/irc-password))
+    (progn
+      (defcustom eg/irc-password nil "Default password to use for IRC connections")
+      (call-interactively 'eg/get-irc-password)))
+#+end_src
