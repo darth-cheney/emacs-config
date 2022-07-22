@@ -1,7 +1,7 @@
 #+TITLE: Emacs Literatie Configuration
 #+AUTHOR: Eric Gade (darth-cheney)
 #+STARTUP: show2levels indent hidestars
-#+PROPERTY: header-args :tangle "~/.emacs.d/init.el"
+#+PROPERTY: header-args :tangle (let ((org-use-tag-inheritance t)) (if (member "INACTIVE" (org-get-tags))  "no" "~/.emacs.d/init.el")))
 
 ** Early Init Settings
 :PROPERTIES:
@@ -101,7 +101,6 @@ These initial defaults have been taken from an old config. Consider modifying an
    bookmark-default-file (expand-file-name ".bookmarks.el" user-emacs-directory)
    buffers-menu-max-size 30
    case-fold-search t
-   cursor-type 'box
    column-number-mode t
    delete-selection-mode t
    ediff-split-window-function 'split-window-horizontally
@@ -164,6 +163,7 @@ Use utf-8 as much as possible
 (set-language-environment "English")    ; Set up multilingual environment
 #+end_src
 ** Custom Commands
+
 Commands that I have written for personal use.
 
 This command will kill all /other/ (meaning non-current) buffers.
@@ -193,28 +193,45 @@ This command kills all buffers period.
   (mapc 'kill-buffer (buffer-list))
   (delete-other-windows))
 #+end_src
-
+** SVG Integration
+We use the [[https://github.com/rougier/svg-lib][svg-lib]] library for allowing dynamic SVGs to be inserted inline in certain modes, like org
+#+begin_src emacs-lisp
+  (use-package svg-lib
+               :straight '(svg-lib :type git :host github :repo "rougier/svg-lib"))
+#+end_src
 ** Themes
 Load the DOOM Themes, which are nice defaults. Note that we have _disabled_ the default loading of the challenger-deep theme for now.
 #+begin_src emacs-lisp
-  ;(use-package doom-themes
-           ;;:init (load-theme 'doom-challenger-deep t)
-           ;)
+  (use-package doom-themes
+          ;;:init (load-theme 'doom-challenger-deep t)
+           )
 #+end_src
 
 Load the NANO theme
 #+begin_src emacs-lisp
     (use-package nano-theme
       :ensure nil
-      :defer t
+      ;;:defer t
       :straight '(nano-theme :type git :host github :repo "rougier/nano-theme"))
   (setq nano-fonts-use t)
-  (with-eval-after-load "nano-light"
-      (setq-default cursor-type 'box))
-  (with-eval-after-load "nano-dark"
-      (setq-default cursor-type 'box))
+#+end_src
+
+Ensure that when we switch themes, we reset the cursor to be a block type
+#+begin_src emacs-lisp
+  (defun eg/after-theme-load (_theme &rest args)
+    (message "eg/after-theme-load!")
+    (setq-default cursor-type 'box)
+    (nano-modeline-mode 1)
+  (advice-add 'load-theme :after 'eg/after-theme-load)
+  (advice-add 'counsel-load-theme :after 'eg/after-theme-load))
+#+end_src
+
+Load the nano-light theme as the default
+#+begin_src emacs-lisp
+  ;(load-theme 'nano-light t)
+  (nano-mode)
   (load-theme 'nano-light t)
-  ;;(nano-light)
+  (setq-default cursor-type 'box)
 #+end_src
 ** Modeline Setup
 
@@ -363,7 +380,6 @@ Setup minibuffer with the custom header line
 
 
 (add-hook 'minibuffer-setup-hook #'my/minibuffer-setup)
-(add-hook 'load-theme-hook #'my/minibuffer-setup)
 #+end_src
 ** Ivy Configuration
 Use Ivy as the completion frontend
@@ -538,7 +554,6 @@ Parenthesis and bracket autocompletion (see JS2 Setings for example of use)
 
 ** Language Settings
 This section describes settings for specific languages, including syntax highlighting and LSP interaction.
-
 *** Tree Sitter (currently _INACTIVE_)
 /Adapted from: https://vxlabs.com/2022/06/12/typescript-development-with-emacs-tree-sitter-and-lsp-in-2022/
 #+begin_src emacs-lisp
@@ -555,7 +570,23 @@ This section describes settings for specific languages, including syntax highlig
 
 *** Ruby Settings
 #+begin_src emacs-lisp
-(use-package rvm)
+(defun eg/ruby-mode-hook ()
+  (company-mode)
+  (eglot-ensure))
+(use-package ruby-mode
+  :hook
+  (ruby-mode . eg/ruby-mode-hook))
+(use-package ruby-electric
+  :hook
+  (ruby-mode . ruby-electric-mode))
+(use-package rvm
+  :config (rvm-use-default))
+
+;; Add Ruby files to the auto-mode setup
+(add-to-list 'auto-mode-alist
+             '("\\.\\(?:cap\\|gemspec\\|irbrc\\|gemrc\\|rake\\|rb\\|ru\\|thor\\)\\'" . ruby-mode))
+(add-to-list 'auto-mode-alist
+             '("\\(?:Brewfile\\|Capfile\\|Gemfile\\(?:\\.[a-zA-Z0-9._-]+\\)?\\|[rR]akefile\\)\\'" . ruby-mode))
 #+end_src
 
 *** Javascript/JSX Settings
@@ -622,7 +653,10 @@ We use web-mode for editing HTML
 #+begin_src emacs-lisp
 (use-package markdown-mode)
 #+end_src
-
+*** YAML
+#+begin_src emacs-lisp
+(use-package yaml-mode)
+#+end_src
 *** Lisp Settings (including Elisp)
 Highlight parentheses when we are editing lisp files.
 #+begin_src emacs-lisp
@@ -659,6 +693,11 @@ The following are the old settings for `lsp-mode`, which are currently _INACTIVE
 (use-package eglot)
 #+end_src
 
+** General Formatting Settings
+**** Olivetti
+#+begin_src emacs-lisp
+(use-package olivetti)
+#+end_src
 ** Company and Completions Settings
 We use `company-mode` for inline completions
 #+begin_src emacs-lisp
@@ -685,7 +724,7 @@ Elpher is a mode for dealing with Gemini and Gopher browsing
 #+end_src
 
 ** Org Settings
-*** Old Settings
+*** Old Settings (_INACTIVE_) :INACTIVE:
 The following are the `org-mode` settings I was previously using in my main config. It is currently _INACTIVE_, as I'm experimenting with more of a NANO based theme.
 
 #+begin_src emacs-lisp
@@ -750,7 +789,7 @@ The following are the `org-mode` settings I was previously using in my main conf
 ;; (setq org-agenda-files '("~/Sync/primary-agenda.org"))
 #+end_src
 
-*** Current Config
+*** Interim Config (_INACTIVE_) :INACTIVE:
 This area is for the new org-mode config
 #+begin_src emacs-lisp
   (use-package org
@@ -783,6 +822,46 @@ Use `org-roam` for linked notes. We provide specific settings for the location o
   )
 #+end_src
 
+*** New Test Settings
+Modified from [[https://github.com/rougier/dotemacs/blob/master/dotemacs.org][https://github.com/rougier/dotemacs/blob/master/dotemacs.org]]
+**** General Settings
+#+begin_src emacs-lisp
+  (use-package org)
+  ;; Basic Defaults
+  (setq-default org-ellipsis " …"              ; Nicer ellipsis
+              org-tags-column 1              ; Tags next to header title
+              org-hide-emphasis-markers t    ; Hide markers
+              org-cycle-separator-lines 2    ; Number of empty lines between sections
+              org-use-tag-inheritance nil    ; Tags ARE NOT inherited 
+              org-use-property-inheritance t ; Properties ARE inherited
+              org-indent-indentation-per-level 2 ; Indentation per level
+              org-link-use-indirect-buffer-for-internals t ; Indirect buffer for internal links
+              org-fontify-quote-and-verse-blocks t ; Specific face for quote and verse blocks
+              org-return-follows-link nil    ; Follow links when hitting return
+              org-image-actual-width nil     ; Resize image to window width
+              org-indirect-buffer-display 'other-window ; Tab on a task expand it in a new window
+              org-outline-path-complete-in-steps nil) ; No steps in path display
+#+end_src
+**** Babel Settings
+We provide some nice initial Babel settings, such as appropriate fonts for code blocks etc.
+#+begin_src emacs-lisp
+  (setq-default org-src-fontify-natively t         ; Fontify code in code blocks.
+              org-adapt-indentation nil          ; Adaptive indentation
+              org-src-tab-acts-natively t        ; Tab acts as in source editing
+              org-confirm-babel-evaluate nil     ; No confirmation before executing code
+              org-edit-src-content-indentation 0 ; No relative indentation for code blocks
+              org-fontify-whole-block-delimiter-line t) ; Fontify whole block
+#+end_src
+** Dired and Dirvish
+We are using Dirvish as a substitute for Dired mode
+#+begin_src emacs-lisp
+(use-package dirvish
+  :ensure t
+  :init
+  ;; Let Dirvish take over Dired globally
+  (dirvish-override-dired-mode))
+#+end_src
+
 ** Projectile Settings
 Projectile is a package used for project management. It has many useful features, not least among them a project-wide grep within files.
 #+begin_src emacs-lisp
@@ -799,21 +878,45 @@ Projectile is a package used for project management. It has many useful features
   (setq projectile-switch-project-action #'projectile-dired))
 #+end_src
 
+** Linting and Highlighting
+*** Flymake
+#+begin_src emacs-lisp
+      (use-package flymake
+      :straight nil
+      :custom
+      (flymake-fringe-indicator-position nil)
+      :hook
+      (prog-mode . flymake-mode))
+#+end_src
+*** Tree-Sittyeser
+#+begin_src emacs-lisp
+(use-package tree-sitter
+  :hook
+  (js2-mode . tree-sitter-hl-mode)
+  (typescript-mode . tree-sitter-hl-mode)
+  (typescript-tsx-mode . tree-sitter-hl-mode))
+
+(use-package tree-sitter-langs
+  :after tree-sitter
+  :defer nil
+  :config
+  (tree-sitter-require 'tsx)
+  (add-to-list 'tree-sitter-major-mode-language-alist
+               '(typescript-tsx-mode . tsx)))
+#+end_src
 ** Load Further Custom Functions
 We provide a host of over custom functions in a separate file
 #+begin_src emacs-lisp
 (load "~/.emacs.d/eric-functions.el")
 #+end_src
 
-
 ** Finally
 Enable `nano-mode`, if it's available
 #+begin_src emacs-lisp
-(nano-mode)
+;;(nano-mode)
 #+end_src
 
 Set the default cursor for all buffers and frames to be a box
-(setq-default cursor-type 'box)
 *** IRC Settings
 I use a custom interactive function to get my IRC password at startup. It is then saved in a custom variable for future sessions. Or at least, that was the idea. For some reason it asks every time I start Emacs...
 #+begin_src emacs-lisp
