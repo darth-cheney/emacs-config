@@ -2,7 +2,6 @@
 #+AUTHOR: Eric Gade (darth-cheney)
 #+STARTUP: show2levels indent hidestars
 #+PROPERTY: header-args :tangle (let ((org-use-tag-inheritance t)) (if (member "INACTIVE" (org-get-tags))  "no" "~/.emacs.d/init.el")))
-
 ** Early Init Settings
 :PROPERTIES:
 :header-args:emacs-lisp: :tangle "~/.emacs.d/early-init.el"
@@ -79,6 +78,7 @@ Ignore Common Lisp deprecation warnings
   ;; Disable line numbering in these modes:
   (dolist (mode '(org-mode-hook
                   term-mode-hook
+                  vterm-mode-hook
                   shell-mode-hook
                   eshell-mode-hook
                   elpher-mode-hook
@@ -192,6 +192,19 @@ This command kills all buffers period.
   (interactive)
   (mapc 'kill-buffer (buffer-list))
   (delete-other-windows))
+#+end_src
+** VTerm
+I am using ~vterm~ instead of ~ansi-term~ for the time being.
+#+begin_src emacs-lisp
+(defun eg/vterm-mode-hook ()
+  (define-key vterm-mode-map (kbd "C-<left>") 'windmove-left)
+  (define-key vterm-mode-map (kbd "C-<right>") 'windmove-right)
+  (define-key vterm-mode-map (kbd "C-<up>") 'windmove-up)
+  (define-key vterm-mode-map (kbd "C-<down>") 'windmove-down))
+(use-package vterm
+  :hook
+  (vterm-mode . eg/vterm-mode-hook))
+
 #+end_src
 ** SVG Integration
 We use the [[https://github.com/rougier/svg-lib][svg-lib]] library for allowing dynamic SVGs to be inserted inline in certain modes, like org
@@ -308,6 +321,45 @@ https://raw.githubusercontent.com/rougier/dotemacs/master/dotemacs.org
                     :inherit '(nano-modeline-inactive-secondary))
 #+end_src
 
+Custom Modeline Formats
+#+begin_src emacs-lisp
+(defun eg/nano-modeline-prog-mode-p ()
+   (derived-mode-p 'prog-mode))
+
+(defun eg/nano-get-branch-name-string ()
+  (let ((branch-name (nano-modeline-vc-branch)))
+    (if branch-name
+        branch-name
+      " ")))
+
+(defun eg/nano-modeline-prog-mode ()
+  (let* ((icon (plist-get (cdr (assoc 'prog-mode nano-modeline-mode-formats)) :icon))
+         (buff-name (format-mode-line "%b"))
+         (branch-name (eg/nano-get-branch-name-string))
+         (mode-name (nano-modeline-mode-name))
+         (num-lines (car (page--count-lines-page)))
+         (prog-circle (propertize "ProgressCircle" 'display
+                                  (svg-lib-progress-pie
+                                   (/ (current-line) (* 1.0 num-lines))
+                                   nil
+                                   :width 1
+                                   :stroke 2
+                                   :padding 2
+                                   :margin 0)))
+         (position (format-mode-line "%l:%c")))
+    (nano-modeline-render icon
+                          buff-name
+                          branch-name
+                          (concat position "  " mode-name))))
+
+(add-to-list
+ 'nano-modeline-mode-formats
+ '(prog-mode
+   :mode-p eg/nano-modeline-prog-mode-p
+   :format eg/nano-modeline-prog-mode
+   :icon ""))
+#+end_src
+
 Custom hook for styling the modeline as a thin line.
 Taken from ()
 #+begin_src emacs-lisp
@@ -381,6 +433,26 @@ Setup minibuffer with the custom header line
 
 (add-hook 'minibuffer-setup-hook #'my/minibuffer-setup)
 #+end_src
+** Counsel Settings
+We use Counsel in combination with Ivy in order to have a rich completion interface in the minibuffer.
+#+begin_src emacs-lisp
+(use-package counsel
+  :ensure t
+  :bind (("M-x" . counsel-M-x)
+	 ("C-x b" . counsel-switch-buffer)
+	 ("C-x C-f" . counsel-find-file)
+	 :map minibuffer-local-map
+	 ("C-r" . 'counsel-minibuffer-history)))
+
+;; Also init which-key, which helps with
+;; documentation and provides the delay before
+;; showing futher bindings
+(use-package which-key
+	     :init (which-key-mode)
+	     :diminish which-key-mode
+	     :config
+	     (setq which-key-idle-delay 1))
+#+end_src
 ** Ivy Configuration
 Use Ivy as the completion frontend
 #+begin_src emacs-lisp
@@ -402,26 +474,6 @@ Use Ivy as the completion frontend
 Smex shows the most recently-used commands at the top of the minibuffer when executing interactively.
 #+begin_src emacs-lisp
 (use-package smex)
-#+end_src
-
-** Counsel Settings
-We use Counsel in combination with Ivy in order to have a rich completion interface in the minibuffer.
-#+begin_src emacs-lisp
-(use-package counsel
-	     :bind (("M-x" . counsel-M-x)
-		   ("C-x b" . counsel-switch-buffer)
-		   ("C-x C-f" . counsel-find-file)
-		   :map minibuffer-local-map
-		   ("C-r" . 'counsel-minibuffer-history)))
-
-;; Also init which-key, which helps with
-;; documentation and provides the delay before
-;; showing futher bindings
-(use-package which-key
-	     :init (which-key-mode)
-	     :diminish which-key-mode
-	     :config
-	     (setq which-key-idle-delay 1))
 #+end_src
 
 ** Icons and other Graphical Flourishes
@@ -483,10 +535,16 @@ Windmove has some problems by default when in terminal char mode. We have some s
      (define-key term-raw-map (kbd "C-<right>") 'windmove-right)
      (define-key term-raw-map (kbd "C-<up>") 'windmove-up)
      (define-key term-raw-map (kbd "C-<down>") 'windmove-down)))
+(eval-after-load "vterm"
+  '(progn
+     (define-key term-raw-map (kbd "C-<left>") 'windmove-left)
+     (define-key term-raw-map (kbd "C-<right>") 'windmove-right)
+     (define-key term-raw-map (kbd "C-<up>") 'windmove-up)
+     (define-key term-raw-map (kbd "C-<down>") 'windmove-down)))
 #+end_src
 
   Dim the other (inactive) buffer windows when the cursor is not in them.
-  ,#+begin_src emacs-lisp
+  #+begin_src emacs-lisp
   (use-package dimmer
     :custom ((dimmer-fraction 0.45)
              ;; :both will dim background and foreground
@@ -554,20 +612,11 @@ Parenthesis and bracket autocompletion (see JS2 Setings for example of use)
 
 ** Language Settings
 This section describes settings for specific languages, including syntax highlighting and LSP interaction.
-*** Tree Sitter (currently _INACTIVE_)
-/Adapted from: https://vxlabs.com/2022/06/12/typescript-development-with-emacs-tree-sitter-and-lsp-in-2022/
+*** Language Mode Prerequisites
+Make sure we add binaries in a local project's node_modules folder (this lets us use project eslint, etc)
 #+begin_src emacs-lisp
-;;(use-package tree-sitter
-;;  :ensure t
-;;  :config
-;;  (global-tree-sitter-mode)
-;;  (add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode))
-
-;; (use-package tree-sitter-langs
-;;  :ensure t
-;;  :after tree-sitter)
+(use-package add-node-modules-path)
 #+end_src
-
 *** Ruby Settings
 #+begin_src emacs-lisp
 (defun eg/ruby-mode-hook ()
@@ -592,31 +641,46 @@ This section describes settings for specific languages, including syntax highlig
 *** Javascript/JSX Settings
 Custom hooks for JS2 and rjsx modes
 
-#+begin_src emacs-lisp
-    (defun eg/rjsx-mode-hook ()
-        (js2-minor-mode)
-        (company-mode)
-        (eglot-ensure))
-  
-  (defun eg/js2-mode-hook ()
-    (progn
-      (setq mode-name "JS2")))
-  (use-package js2-mode
-    :hook (js2-mode . eg/js2-mode-hook)
-    :custom ((js-indent-level 4)))
-#+end_src
-
 Install JS2 mode for dealing with Javscript files
-#+begin_src elisp-mode
+#+begin_src emacs-lisp
+(defun eg/js2-mode-hook ()
+    (progn
+      (setq mode-name "JS2")
+      (add-node-modules-path)))
 (use-package js2-mode
   :hook (js2-mode . eg/js2-mode-hook)
-  :custom ((js-indent-level 4)))
+  :custom ((js-indent-level 2)))
 
 (add-to-list 'auto-mode-alist '("\\.\\(js\\|es6\\)\\(\\.erb\\)?\\'" . js2-mode))
 #+end_src
 
+Install Typescript mode for plain ts files
+#+begin_src emacs-lisp
+(defun eg/typescript-mode-hook ()
+  (company-mode)
+  (js2-minor-mode)
+  (eglot-ensure)
+  (add-node-modules-path))
+;; Taken from (https://vxlabs.com/2022/06/12/typescript-development-with-emacs-tree-sitter-and-lsp-in-2022/)
+(use-package typescript-mode
+  :after tree-sitter
+  :config
+  (define-derived-mode typescriptreact-mode typescript-mode
+    "TypeScript TSX")
+  (add-to-list 'auto-mode-alist '("\\.\\(ts\\)?\\'" . typescript-mode))
+  (add-to-list 'auto-mode-alist '("\\.\\(tsx\\)?\\'" . typescriptreact-mode))
+  (add-to-list 'tree-sitter-major-mode-language-alist '(typescriptreact-mode . tsx))
+  :hook
+  (typescript-mode . eg/typescript-mode-hook))
+#+end_src
+
 Install rjsx mode for dealing with JSX specifically. Note that in the custom hook we've written for this package, js2 becomes a minor mode.
 #+begin_src emacs-lisp
+(defun eg/rjsx-mode-hook ()
+        (js2-minor-mode)
+        (add-node-modules-path)
+        (company-mode)
+        (eglot-ensure))
 (use-package rjsx-mode
   :hook (rjsx-mode . eg/rjsx-mode-hook))
 
@@ -631,6 +695,20 @@ Use Prettier for better JS formatting
          (typescript-mode . prettier-js-mode)))
 #+end_src
 
+Try to use local eslint config files, if found
+#+begin_src emacs-lisp
+(use-package eslint-rc
+  :hook ((js2-mode . eslint-rc-mode)
+         (typescript-mode . eslint-rc-mode)
+         (rjsx-mode . eslint-rc-mode)))
+#+end_src
+
+We need popwin to popup special Eglot modes
+#+begin_src emacs-lisp
+(use-package popwin
+  :config (lambda ()
+            (push "*xref*" popwin:special-display-config)))
+#+end_src
 *** JSON Settings
 #+begin_src emacs-lisp
 (use-package json-mode)
@@ -656,6 +734,7 @@ We use web-mode for editing HTML
 *** YAML
 #+begin_src emacs-lisp
 (use-package yaml-mode)
+(add-to-list 'auto-mode-alist '("\\.\\(yml\\|yaml\\)?\\'" . yaml-mode))
 #+end_src
 *** Lisp Settings (including Elisp)
 Highlight parentheses when we are editing lisp files.
@@ -693,8 +772,17 @@ The following are the old settings for `lsp-mode`, which are currently _INACTIVE
 (use-package eglot)
 #+end_src
 
+Tell LSP mode where to find your tsconfig file(s), when used. Taken from (https://notes.alexkehayias.com/setting-up-typescript-and-eslint-with-eglot/)
+#+begin_src emacs-lisp
+;; (defun eg/project-try-ts-config-json (dir)
+;;   (when-let* ((found (locate-dominating-file-dir "tsconfig.json")))
+;;     (cons 'eglot-project found)))
+;; (add-hook 'project-find-functions 'eg/project-try-ts-config-json nil nil)
+;; (add-to-list 'eglot-server-programs
+;;              '((typescript-mode) "typescript-language-serrver" "--stdio"))
+#+end_src
 ** General Formatting Settings
-**** Olivetti
+*** Olivetti
 #+begin_src emacs-lisp
 (use-package olivetti)
 #+end_src
@@ -826,22 +914,40 @@ Use `org-roam` for linked notes. We provide specific settings for the location o
 Modified from [[https://github.com/rougier/dotemacs/blob/master/dotemacs.org][https://github.com/rougier/dotemacs/blob/master/dotemacs.org]]
 **** General Settings
 #+begin_src emacs-lisp
-  (use-package org)
-  ;; Basic Defaults
-  (setq-default org-ellipsis " …"              ; Nicer ellipsis
-              org-tags-column 1              ; Tags next to header title
-              org-hide-emphasis-markers t    ; Hide markers
-              org-cycle-separator-lines 2    ; Number of empty lines between sections
-              org-use-tag-inheritance nil    ; Tags ARE NOT inherited 
-              org-use-property-inheritance t ; Properties ARE inherited
-              org-indent-indentation-per-level 2 ; Indentation per level
-              org-link-use-indirect-buffer-for-internals t ; Indirect buffer for internal links
-              org-fontify-quote-and-verse-blocks t ; Specific face for quote and verse blocks
-              org-return-follows-link nil    ; Follow links when hitting return
-              org-image-actual-width nil     ; Resize image to window width
-              org-indirect-buffer-display 'other-window ; Tab on a task expand it in a new window
-              org-outline-path-complete-in-steps nil) ; No steps in path display
+(use-package org)
+;; Basic Defaults
+(setq-default org-ellipsis " …"              ; Nicer ellipsis
+            org-tags-column 1              ; Tags next to header title
+            org-hide-emphasis-markers t    ; Hide markers
+            org-cycle-separator-lines 2    ; Number of empty lines between sections
+            org-use-tag-inheritance nil    ; Tags ARE NOT inherited 
+            org-use-property-inheritance t ; Properties ARE inherited
+            org-indent-indentation-per-level 2 ; Indentation per level
+            org-link-use-indirect-buffer-for-internals t ; Indirect buffer for internal links
+            org-fontify-quote-and-verse-blocks t ; Specific face for quote and verse blocks
+            org-return-follows-link nil    ; Follow links when hitting return
+            org-image-actual-width nil     ; Resize image to window width
+            org-indirect-buffer-display 'other-window ; Tab on a task expand it in a new window
+            org-outline-path-complete-in-steps nil) ; No steps in path display
 #+end_src
+
+Use some custom capture templates
+#+begin_src emacs-lisp
+(defun eg/get-project-org-capture-file ()
+  (concat (projectile-project-root) "todo.org"))
+(defun eg/org-capture-get-line-number-string ()
+  "Get the line number as a string from an org-capture session"
+  )
+(setq org-capture-templates
+      '(("t" "Basic TODO" entry (file+headline "todo.org" "Basic Tasks")
+         "* TODO %?\n %i\n %a")
+        ("p" "Project TODO" entry (file+headline (lambda () (eg/get-project-org-capture-file)) "Project Tasks")
+         "* TODO %?\n %t\n In file: [[%F::%(with-current-buffer (org-capture-get :original-file-nondirectory) (number-to-string (line-number-at-pos))) ][%f]]\n\n")))
+#+end_src
+
+#+RESULTS:
+| t | Basic TODO | entry | (file+headline todo.org Basic Tasks) | * TODO %? |
+
 **** Babel Settings
 We provide some nice initial Babel settings, such as appropriate fonts for code blocks etc.
 #+begin_src emacs-lisp
@@ -853,7 +959,8 @@ We provide some nice initial Babel settings, such as appropriate fonts for code 
               org-fontify-whole-block-delimiter-line t) ; Fontify whole block
 #+end_src
 ** Dired and Dirvish
-We are using Dirvish as a substitute for Dired mode
+*** Dirvish :INACTIVE:
+We are using Dirvish as a substitute for Dired mode (_INACTIVE_) 
 #+begin_src emacs-lisp
 (use-package dirvish
   :ensure t
@@ -861,11 +968,17 @@ We are using Dirvish as a substitute for Dired mode
   ;; Let Dirvish take over Dired globally
   (dirvish-override-dired-mode))
 #+end_src
-
+*** Dired
+We want to open directories in the same window when clicking them
+#+begin_src emacs-lisp
+(define-key dired-mode-map [mouse-2] 'dired-mouse-find-file)
+#+end_src
 ** Projectile Settings
 Projectile is a package used for project management. It has many useful features, not least among them a project-wide grep within files.
 #+begin_src emacs-lisp
+(message "==========\nIS THISBEING CALLED?\n================")
 (use-package projectile
+  :ensure t
   :diminish projectile-mode
   :config (projectile-mode)
   :custom ((projectile-completion-system 'ivy))
@@ -879,7 +992,7 @@ Projectile is a package used for project management. It has many useful features
 #+end_src
 
 ** Linting and Highlighting
-*** Flymake
+*** Flymake :INACTIVE:
 #+begin_src emacs-lisp
       (use-package flymake
       :straight nil
@@ -888,13 +1001,34 @@ Projectile is a package used for project management. It has many useful features
       :hook
       (prog-mode . flymake-mode))
 #+end_src
-*** Tree-Sittyeser
+*** Flycheck :INACTIVE:
+#+begin_src emacs-lisp
+(use-package flycheck
+  :ensure t
+  :hook (flycheck-mode . add-node-modules-path)
+  :init (global-flycheck-mode))
+
+(use-package flycheck-pos-tip
+  :after flycheck)
+#+end_src
+*** Flymake Settings
+Here we use the new-and-improved built in Flymake rather than Flycheck
+
+Use the eslint backend for Flymake
+#+begin_src emacs-lisp
+(use-package flymake-eslint)
+(add-hook 'js2-mode (lambda () (flymake-eslint-enable)))
+(add-hook 'typescript-mode (lambda () (flymake-eslint-enable)))
+(add-hook 'rjsx-mode (lambda () (flymake-eslint-enable)))
+#+end_src
+*** Tree-Sitter
 #+begin_src emacs-lisp
 (use-package tree-sitter
   :hook
   (js2-mode . tree-sitter-hl-mode)
   (typescript-mode . tree-sitter-hl-mode)
-  (typescript-tsx-mode . tree-sitter-hl-mode))
+  (typescript-tsx-mode . tree-sitter-hl-mode)
+  (typescriptreact-mode))
 
 (use-package tree-sitter-langs
   :after tree-sitter
@@ -903,6 +1037,17 @@ Projectile is a package used for project management. It has many useful features
   (tree-sitter-require 'tsx)
   (add-to-list 'tree-sitter-major-mode-language-alist
                '(typescript-tsx-mode . tsx)))
+#+end_src
+** Snippets
+We use yasnippet for enabling snippets
+#+begin_src emacs-lisp
+(use-package yasnippet)
+(yas-global-mode 1)
+#+end_src
+
+Use a repository of preconfigured snippets
+#+begin_src emacs-lisp
+(use-package yasnippet-snippets)
 #+end_src
 ** Load Further Custom Functions
 We provide a host of over custom functions in a separate file
@@ -933,4 +1078,3 @@ rcirc authinfo list for Freenode"
       (defcustom eg/irc-password nil "Default password to use for IRC connections")
       (call-interactively 'eg/get-irc-password)))
 #+end_src
-
