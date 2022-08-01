@@ -224,7 +224,6 @@ Load the NANO theme
 #+begin_src emacs-lisp
     (use-package nano-theme
       :ensure nil
-      ;;:defer t
       :straight '(nano-theme :type git :host github :repo "rougier/nano-theme"))
   (setq nano-fonts-use t)
 #+end_src
@@ -326,6 +325,9 @@ Custom Modeline Formats
 (defun eg/nano-modeline-prog-mode-p ()
    (derived-mode-p 'prog-mode))
 
+(defun eg/nano-modeline-text-mode-p ()
+  (derived-mode-p 'text-mode))
+
 (defun eg/nano-get-branch-name-string ()
   (let ((branch-name (nano-modeline-vc-branch)))
     (if branch-name
@@ -356,6 +358,12 @@ Custom Modeline Formats
  'nano-modeline-mode-formats
  '(prog-mode
    :mode-p eg/nano-modeline-prog-mode-p
+   :format eg/nano-modeline-prog-mode
+   :icon ""))
+(add-to-list
+ 'nano-modeline-mode-formats
+ '(yaml-mode
+   :mode-p eg/nano-modeline-text-mode-p
    :format eg/nano-modeline-prog-mode
    :icon ""))
 #+end_src
@@ -658,29 +666,27 @@ Install Typescript mode for plain ts files
 #+begin_src emacs-lisp
 (defun eg/typescript-mode-hook ()
   (company-mode)
-  (js2-minor-mode)
   (eglot-ensure)
   (add-node-modules-path))
 ;; Taken from (https://vxlabs.com/2022/06/12/typescript-development-with-emacs-tree-sitter-and-lsp-in-2022/)
 (use-package typescript-mode
   :after tree-sitter
-  :config
-  (define-derived-mode typescriptreact-mode typescript-mode
-    "TypeScript TSX")
-  (add-to-list 'auto-mode-alist '("\\.\\(ts\\)?\\'" . typescript-mode))
-  (add-to-list 'auto-mode-alist '("\\.\\(tsx\\)?\\'" . typescriptreact-mode))
-  (add-to-list 'tree-sitter-major-mode-language-alist '(typescriptreact-mode . tsx))
+  :ensure t
   :hook
   (typescript-mode . eg/typescript-mode-hook))
+(define-derived-mode typescriptreact-mode typescript-mode "TSX")
+(add-to-list 'auto-mode-alist '("\\.tsx?\\'"  . typescriptreact-mode))
+(add-to-list 'auto-mode-alist '("\\.ts?\\'"  . typescript-mode))
 #+end_src
 
 Install rjsx mode for dealing with JSX specifically. Note that in the custom hook we've written for this package, js2 becomes a minor mode.
 #+begin_src emacs-lisp
 (defun eg/rjsx-mode-hook ()
-        (js2-minor-mode)
+        ;;(js2-minor-mode)
         (add-node-modules-path)
         (company-mode)
-        (eglot-ensure))
+        (eglot-ensure)
+        )
 (use-package rjsx-mode
   :hook (rjsx-mode . eg/rjsx-mode-hook))
 
@@ -692,7 +698,8 @@ Use Prettier for better JS formatting
 (use-package prettier-js
   :hook ((js2-mode . prettier-js-mode)
          (web-mode . prettier-js-mode)
-         (typescript-mode . prettier-js-mode)))
+         (typescript-mode . prettier-js-mode)
+         (prettier-js-mode . add-node-modules-path)))
 #+end_src
 
 Try to use local eslint config files, if found
@@ -1027,16 +1034,13 @@ Use the eslint backend for Flymake
   :hook
   (js2-mode . tree-sitter-hl-mode)
   (typescript-mode . tree-sitter-hl-mode)
-  (typescript-tsx-mode . tree-sitter-hl-mode)
-  (typescriptreact-mode))
+  ;;(typescript-tsx-mode . tree-sitter-hl-mode)
+  (typescriptreact-mode . tree-sitter-hl-mode))
 
 (use-package tree-sitter-langs
   :after tree-sitter
-  :defer nil
   :config
-  (tree-sitter-require 'tsx)
-  (add-to-list 'tree-sitter-major-mode-language-alist
-               '(typescript-tsx-mode . tsx)))
+  (add-to-list 'tree-sitter-major-mode-language-alist '(typescriptreact-mode . tsx)))
 #+end_src
 ** Snippets
 We use yasnippet for enabling snippets
