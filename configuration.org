@@ -193,7 +193,7 @@ This command kills all buffers period.
   (mapc 'kill-buffer (buffer-list))
   (delete-other-windows))
 #+end_src
-** VTerm
+** VTerm and Command Line Utils
 I am using ~vterm~ instead of ~ansi-term~ for the time being.
 #+begin_src emacs-lisp
 (defun eg/vterm-mode-hook ()
@@ -204,7 +204,19 @@ I am using ~vterm~ instead of ~ansi-term~ for the time being.
 (use-package vterm
   :hook
   (vterm-mode . eg/vterm-mode-hook))
+#+end_src
 
+Use ~dwim-shell-command~ for on the fly command line integration
+#+begin_src emacs-lisp
+(use-package dwim-shell-command
+  :ensure t
+  :bind (([remap shell-command] . dwim-shell-command)
+         :map dired-mode-map
+         ([remap dired-do-async-shell-command] . dwim-shell-command)
+         ([remap dired-do-shell-command] . dwim-shell-command)
+         ([remap dired-smart-shell-command] . dwim-shell-command))
+  :config
+  )
 #+end_src
 ** SVG Integration
 We use the [[https://github.com/rougier/svg-lib][svg-lib]] library for allowing dynamic SVGs to be inserted inline in certain modes, like org
@@ -340,7 +352,7 @@ Custom Modeline Formats
          (branch-name (eg/nano-get-branch-name-string))
          (mode-name (nano-modeline-mode-name))
          (num-lines (car (page--count-lines-page)))
-         (prog-circle (propertize "ProgressCircle" 'display
+         (prog-circle (propertize "  " 'display
                                   (svg-lib-progress-pie
                                    (/ (current-line) (* 1.0 num-lines))
                                    nil
@@ -352,7 +364,18 @@ Custom Modeline Formats
     (nano-modeline-render icon
                           buff-name
                           branch-name
-                          (concat position "  " mode-name))))
+                          (concat
+                           position
+                           "  "
+                           (if (member #'eglot--managed-mode minor-mode-list)
+                               (format-mode-line (eglot--mode-line-format))
+                             "")
+                           "  "
+                           ;;(format-mode-line flymake-mode-line-format)
+                           ;;"  "
+                           (format-mode-line prog-circle)
+                           "  "
+                           mode-name))))
 
 (add-to-list
  'nano-modeline-mode-formats
@@ -626,24 +649,43 @@ Make sure we add binaries in a local project's node_modules folder (this lets us
 (use-package add-node-modules-path)
 #+end_src
 *** Ruby Settings
+For future reference, the following prevents super weird indentation rules in the normal ruby-mode:
+#+begin_src emacs-lisp
+;; (setq ruby-deep-indent-paren nil)
+#+end_src
+
 #+begin_src emacs-lisp
 (defun eg/ruby-mode-hook ()
+  (setq ruby-indent-level 2
+        ruby-indent-tabs-mode nil)
   (company-mode)
-  (eglot-ensure))
-(use-package ruby-mode
+  ;;(eglot-ensure)
+  )
+(use-package enh-ruby-mode
   :hook
-  (ruby-mode . eg/ruby-mode-hook))
+  (enh-ruby-mode . eg/ruby-mode-hook)
+  (enh-ruby-mode . delete-selection-mode))
 (use-package ruby-electric
   :hook
-  (ruby-mode . ruby-electric-mode))
+  (enh-ruby-mode . ruby-electric-mode))
 (use-package rvm
   :config (rvm-use-default))
 
 ;; Add Ruby files to the auto-mode setup
 (add-to-list 'auto-mode-alist
-             '("\\.\\(?:cap\\|gemspec\\|irbrc\\|gemrc\\|rake\\|rb\\|ru\\|thor\\)\\'" . ruby-mode))
+             '("\\.\\(?:cap\\|gemspec\\|irbrc\\|gemrc\\|rake\\|rb\\|ru\\|thor\\)\\'" . enh-ruby-mode))
 (add-to-list 'auto-mode-alist
-             '("\\(?:Brewfile\\|Capfile\\|Gemfile\\(?:\\.[a-zA-Z0-9._-]+\\)?\\|[rR]akefile\\)\\'" . ruby-mode))
+             '("\\(?:Brewfile\\|Capfile\\|Gemfile\\(?:\\.[a-zA-Z0-9._-]+\\)?\\|[rR]akefile\\)\\'" . enh-ruby-mode))
+#+end_src
+
+Add rubocop for linting
+#+begin_src emacs-lisp
+(use-package rubocop
+   :ensure t
+   :init
+   :hook
+   (enh-ruby-mode . rubocop-mode)
+   :diminish rubocop-mode)
 #+end_src
 
 *** Javascript/JSX Settings
@@ -726,6 +768,7 @@ We use web-mode for editing HTML
 #+begin_src emacs-lisp
 (use-package web-mode)
 (add-to-list 'auto-mode-alist '("\\.html?\\'" . web-mode))
+;(add-to-list 'auto-mode-alist '("\\.erb?\\)'" . web-mode))
 #+end_src
 
 *** CSS and SASS
@@ -776,7 +819,13 @@ The following are the old settings for `lsp-mode`, which are currently _INACTIVE
 
 `eglot-mode` is the new preferred LSP interaction mode.
 #+begin_src emacs-lisp
-(use-package eglot)
+(use-package eglot
+  :config
+  (add-to-list 'eglot-server-programs
+   '((typescript-mode) "typescript-language-server" "--stdio"))
+  (add-to-list 'eglot-server-programs
+  '(enh-ruby-mode "solargraph" "socket" "--port" :autoport))
+  )
 #+end_src
 
 Tell LSP mode where to find your tsconfig file(s), when used. Taken from (https://notes.alexkehayias.com/setting-up-typescript-and-eslint-with-eglot/)
@@ -786,8 +835,15 @@ Tell LSP mode where to find your tsconfig file(s), when used. Taken from (https:
 ;;     (cons 'eglot-project found)))
 ;; (add-hook 'project-find-functions 'eg/project-try-ts-config-json nil nil)
 ;; (add-to-list 'eglot-server-programs
-;;              '((typescript-mode) "typescript-language-serrver" "--stdio"))
+;;              '((typescript-mode) "typescript-language-server" "--stdio"))
 #+end_src
+
+
+*** ELisp Mode
+#+begin_src emacs-lisp
+(set-face-attribute 'show-paren-match nil :weight 'extra-bold :underline t)
+#+end_src
+
 ** General Formatting Settings
 *** Olivetti
 #+begin_src emacs-lisp
@@ -999,7 +1055,7 @@ Projectile is a package used for project management. It has many useful features
 #+end_src
 
 ** Linting and Highlighting
-*** Flymake :INACTIVE:
+*** Flymake
 #+begin_src emacs-lisp
       (use-package flymake
       :straight nil
@@ -1024,6 +1080,8 @@ Here we use the new-and-improved built in Flymake rather than Flycheck
 Use the eslint backend for Flymake
 #+begin_src emacs-lisp
 (use-package flymake-eslint)
+(use-package flymake-ruby
+  :hook (enh-ruby-mode . flymake-ruby-load))
 (add-hook 'js2-mode (lambda () (flymake-eslint-enable)))
 (add-hook 'typescript-mode (lambda () (flymake-eslint-enable)))
 (add-hook 'rjsx-mode (lambda () (flymake-eslint-enable)))
@@ -1034,24 +1092,36 @@ Use the eslint backend for Flymake
   :hook
   (js2-mode . tree-sitter-hl-mode)
   (typescript-mode . tree-sitter-hl-mode)
-  ;;(typescript-tsx-mode . tree-sitter-hl-mode)
   (typescriptreact-mode . tree-sitter-hl-mode))
 
 (use-package tree-sitter-langs
   :after tree-sitter
   :config
-  (add-to-list 'tree-sitter-major-mode-language-alist '(typescriptreact-mode . tsx)))
+  (add-to-list
+    'tree-sitter-major-mode-language-alist
+    '(typescriptreact-mode . tsx)))
 #+end_src
 ** Snippets
 We use yasnippet for enabling snippets
 #+begin_src emacs-lisp
 (use-package yasnippet)
 (yas-global-mode 1)
+(setq org-src-tab-acts-natively nil)
 #+end_src
 
 Use a repository of preconfigured snippets
 #+begin_src emacs-lisp
 (use-package yasnippet-snippets)
+#+end_src
+
+
+
+
+
+** Dir Local Setup
+We need to whitelist certain unsafe variables as safe, when setting using a dir-locals file:
+#+begin_src emacs-lisp
+()
 #+end_src
 ** Load Further Custom Functions
 We provide a host of over custom functions in a separate file
