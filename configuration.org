@@ -115,7 +115,13 @@ These initial defaults have been taken from an old config. Consider modifying an
    truncate-lines nil
    truncate-partial-width-windows nil)
 #+end_src
-
+**** Use ~prot~'s lin mode for highlighting the current line
+#+begin_src emacs-lisp
+(use-package lin
+    :straight '(lin-mode :type git :host github :repo "protesilaos/lin")
+    :bind
+    ("C-c l" . lin-mode))
+#+end_src
 *** Opacity Related Settings
 In the end, the following keybindings will be available:
 | M-C-8 | Decrease opacity   |
@@ -217,6 +223,19 @@ Use ~dwim-shell-command~ for on the fly command line integration
          ([remap dired-smart-shell-command] . dwim-shell-command))
   :config
   )
+#+end_src
+** Basic Built-ins (straight)
+Make sure that plain modes are at the latest versions, using straight.
+#+begin_src emacs-lisp
+(use-package xref
+    :straight t)
+
+  (use-package project
+    :straight t)
+
+  (use-package eldoc
+    :straight t)
+
 #+end_src
 ** SVG Integration
 We use the [[https://github.com/rougier/svg-lib][svg-lib]] library for allowing dynamic SVGs to be inserted inline in certain modes, like org
@@ -659,8 +678,7 @@ For future reference, the following prevents super weird indentation rules in th
   (setq ruby-indent-level 2
         ruby-indent-tabs-mode nil)
   (company-mode)
-  ;;(eglot-ensure)
-  )
+  (eglot-ensure))
 (use-package enh-ruby-mode
   :hook
   (enh-ruby-mode . eg/ruby-mode-hook)
@@ -821,6 +839,28 @@ The following are the old settings for `lsp-mode`, which are currently _INACTIVE
 #+begin_src emacs-lisp
 (use-package eglot
   :config
+  ;; We define a custom eglot hover function to deal with
+  ;; Solargraph's returning of null when hovering over an
+  ;; empty area. See (https://github.com/joaotavora/eglot/issues/1019#issuecomment-1230546329)
+  (defun eglot--format-markup (markup)
+  "Format MARKUP according to LSP's spec."
+  (if (plist-get markup :value)
+      (pcase-let ((`(,string ,mode)
+               (if (stringp markup) (list markup 'gfm-view-mode)
+                 (list (plist-get markup :value)
+                       (pcase (plist-get markup :kind)
+                         ("markdown" 'gfm-view-mode)
+                         ("plaintext" 'text-mode)
+                         (_ major-mode))))))
+    (with-temp-buffer
+      (setq-local markdown-fontify-code-blocks-natively t)
+      (insert string)
+      (let ((inhibit-message t)
+	    (message-log-max nil))
+        (ignore-errors (delay-mode-hooks (funcall mode))))
+      (font-lock-ensure)
+      (string-trim (filter-buffer-substring (point-min) (point-max)))))
+      "\n"))
   (add-to-list 'eglot-server-programs
    '((typescript-mode) "typescript-language-server" "--stdio"))
   (add-to-list 'eglot-server-programs
@@ -844,6 +884,14 @@ Tell LSP mode where to find your tsconfig file(s), when used. Taken from (https:
 (set-face-attribute 'show-paren-match nil :weight 'extra-bold :underline t)
 #+end_src
 
+** DAP Settings
+Debug Adapter Protocol Settings
+#+begin_src emacs-lisp
+(use-package dap-mode
+  :config
+  (require 'dap-node)
+  (dap-node-setup))
+#+end_src
 ** General Formatting Settings
 *** Olivetti
 #+begin_src emacs-lisp
@@ -946,6 +994,7 @@ This area is for the new org-mode config
   (use-package org
     :custom
     (org-pretty-entities t)
+    (org-return-follows-link t)
     (org-hide-emphasis-markers t)
     (org-fontify-whole-heading-line t)
     (org-fontify-done-headline t)
@@ -991,7 +1040,8 @@ Modified from [[https://github.com/rougier/dotemacs/blob/master/dotemacs.org][ht
             org-return-follows-link nil    ; Follow links when hitting return
             org-image-actual-width nil     ; Resize image to window width
             org-indirect-buffer-display 'other-window ; Tab on a task expand it in a new window
-            org-outline-path-complete-in-steps nil) ; No steps in path display
+            org-outline-path-complete-in-steps nil ; No steps in path display
+            org-return-follows-link t) ;Self explanatory
 #+end_src
 
 Use some custom capture templates
@@ -1005,7 +1055,7 @@ Use some custom capture templates
       '(("t" "Basic TODO" entry (file+headline "todo.org" "Basic Tasks")
          "* TODO %?\n %i\n %a")
         ("p" "Project TODO" entry (file+headline (lambda () (eg/get-project-org-capture-file)) "Project Tasks")
-         "* TODO %?\n %t\n In file: [[%F::%(with-current-buffer (org-capture-get :original-file-nondirectory) (number-to-string (line-number-at-pos))) ][%f]]\n\n")))
+         "* TODO %?\n %t\n In file: [[file:%F::%(with-current-buffer (org-capture-get :original-file-nondirectory) (number-to-string (line-number-at-pos)))][%f]]\n\n")))
 #+end_src
 
 #+RESULTS:
@@ -1039,7 +1089,6 @@ We want to open directories in the same window when clicking them
 ** Projectile Settings
 Projectile is a package used for project management. It has many useful features, not least among them a project-wide grep within files.
 #+begin_src emacs-lisp
-(message "==========\nIS THISBEING CALLED?\n================")
 (use-package projectile
   :ensure t
   :diminish projectile-mode
@@ -1054,6 +1103,28 @@ Projectile is a package used for project management. It has many useful features
   (setq projectile-switch-project-action #'projectile-dired))
 #+end_src
 
+Add some custom functions that will help when in Projectile projects
+#+begin_src emacs-lisp
+;; Retrieves the current file path without
+;; the Projectile project's root at the beginning
+;; (ie, a "project-relative" path of the current file)
+(defun eg/project-filename ()
+  (if buffer-file-name
+      (substring
+       buffer-file-name
+       (length (projectile-project-root))
+       nil)
+    ""))
+
+(defun eg/project-filename-to-clipboard ()
+  "Place the project root relative path of
+  the file of the current buffer into the clipboard"
+  (interactive)
+  (let ((path (eg/project-filename)))
+    (with-temp-buffer
+      (insert path)
+      (clipboard-kill-region (point-min) (point-max)))))
+#+end_src
 ** Linting and Highlighting
 *** Flymake
 #+begin_src emacs-lisp
@@ -1092,14 +1163,18 @@ Use the eslint backend for Flymake
   :hook
   (js2-mode . tree-sitter-hl-mode)
   (typescript-mode . tree-sitter-hl-mode)
-  (typescriptreact-mode . tree-sitter-hl-mode))
+  (typescriptreact-mode . tree-sitter-hl-mode)
+  (enh-ruby-mode . tree-sitter-hl-mode))
 
 (use-package tree-sitter-langs
   :after tree-sitter
   :config
   (add-to-list
     'tree-sitter-major-mode-language-alist
-    '(typescriptreact-mode . tsx)))
+    '(typescriptreact-mode . tsx))
+  (add-to-list
+    'tree-sitter-major-mode-language-alist
+    '(enh-ruby-mode . ruby)))
 #+end_src
 ** Snippets
 We use yasnippet for enabling snippets
