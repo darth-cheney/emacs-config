@@ -107,3 +107,30 @@ setup for today's month and day combination"
     (sleep-for 1)
     (dired repo-path)
     (other-window 2)))
+
+
+
+(setq eg/idp-projectile-contents "-/node_modules/\n-/nodeenv/\n-/public/acuant/")
+(setq eg/idp-application-yml "development:
+   #domain_name: <your-local-ip>:3000
+   #mailer_domain_name: <your-local-ip>:3000")
+(setq eg/idp-dir-locals
+      (prin1-to-string
+       '((js2-mode . ((js2-basic-offset . 2)))
+         (typescriptreact-mode . ((typescript-indent-level . 2))))
+       ))
+(defun eg/setup-idp ()
+  "Setup the config/application.yml and projectile files.
+To be used on a fresh clone of the idp repo"
+  (interactive)
+  (if (and (projectile-project-root) (string-equal (projectile-project-name) "identity-idp"))
+      (let ((projectile-filename (concat (projectile-project-root) ".projectile"))
+            (application-yml-filename (concat (projectile-project-root) "config/application.yml"))
+            (dir-locals-filename (concat (projectile-project-root) ".dir-locals.el")))
+        (with-temp-file
+            projectile-filename
+          (insert eg/idp-projectile-contents))
+        (with-temp-file application-yml-filename
+          (insert eg/idp-application-yml))
+        (with-temp-file dir-locals-filename
+          (insert eg/idp-dir-locals)))))
