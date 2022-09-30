@@ -122,6 +122,10 @@ These initial defaults have been taken from an old config. Consider modifying an
     :bind
     ("C-c l" . lin-mode))
 #+end_src
+**** Use Iosevka for the default font
+#+begin_src emacs-lisp
+(set-face-attribute 'default nil :font "DinaRemasterII" :weight 'regular :height 170)
+#+end_src
 *** Opacity Related Settings
 In the end, the following keybindings will be available:
 | M-C-8 | Decrease opacity   |
@@ -706,6 +710,12 @@ Add rubocop for linting
    :diminish rubocop-mode)
 #+end_src
 
+*** Node / NVM Settings
+#+begin_src emacs-lisp
+(use-package nvm
+:straight '(nvm :type git :host github :repo "rejeep/nvm.el"))
+#+end_src
+
 *** Javascript/JSX Settings
 Custom hooks for JS2 and rjsx modes
 
@@ -786,7 +796,7 @@ We use web-mode for editing HTML
 #+begin_src emacs-lisp
 (use-package web-mode)
 (add-to-list 'auto-mode-alist '("\\.html?\\'" . web-mode))
-;(add-to-list 'auto-mode-alist '("\\.erb?\\)'" . web-mode))
+(add-to-list 'auto-mode-alist '("\\.erb?\\'" . web-mode))
 #+end_src
 
 *** CSS and SASS

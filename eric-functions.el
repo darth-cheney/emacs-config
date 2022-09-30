@@ -109,16 +109,24 @@ setup for today's month and day combination"
     (other-window 2)))
 
 
-
-(setq eg/idp-projectile-contents "-/node_modules/\n-/nodeenv/\n-/public/acuant/")
+(setq eg/idp-projectile-contents
+      (string-join
+       '("-/node_modules/"
+         "-/nodeenv/"
+         "-/public/acuant/"
+         "-/public/packs/"
+         "-/app/assets/builds/"
+         "-/tmp/")
+       "\n"))
 (setq eg/idp-application-yml "development:
-   #domain_name: <your-local-ip>:3000
-   #mailer_domain_name: <your-local-ip>:3000")
+  config_key:
+  #domain_name: <your-local-ip>:3000
+  #mailer_domain_name: <your-local-ip>:3000")
 (setq eg/idp-dir-locals
       (prin1-to-string
        '((js2-mode . ((js2-basic-offset . 2)))
-         (typescriptreact-mode . ((typescript-indent-level . 2))))
-       ))
+         (typescriptreact-mode . ((typescript-indent-level . 2))))))
+
 (defun eg/setup-idp ()
   "Setup the config/application.yml and projectile files.
 To be used on a fresh clone of the idp repo"
@@ -134,3 +142,12 @@ To be used on a fresh clone of the idp repo"
           (insert eg/idp-application-yml))
         (with-temp-file dir-locals-filename
           (insert eg/idp-dir-locals)))))
+
+(defun eg/idp-mocha-this-file ()
+  "Run Mocha on the current test file.
+and open in a compilation buffer"
+  (interactive)
+  (compile
+   (concat "cd " (projectile-project-root) " && npx mocha " (eg/project-filename))
+   t))
+(global-set-key (kbd "C-c t") #'eg/idp-mocha-this-file)
