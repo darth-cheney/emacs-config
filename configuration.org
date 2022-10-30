@@ -717,6 +717,20 @@ Add rubocop for linting
 #+end_src
 
 *** Javascript/JSX Settings
+Add regex so we can link to file lines when using compilation mode for testing and debugging
+#+begin_src emacs-lisp
+;; Add NodeJS error format
+(setq compilation-error-regexp-alist-alist
+      (cons '(node "^[  ]+at \\(?:[^\(\n]+ \(\\)?\\([a-zA-Z\.0-9_/-]+\\):\\([0-9]+\\):\\([0-9]+\\)\)?$"
+                         1 ;; file
+                         2 ;; line
+                         3 ;; column
+                         )
+            compilation-error-regexp-alist-alist))
+(setq compilation-error-regexp-alist
+      (cons 'node compilation-error-regexp-alist))
+#+end_src
+
 Custom hooks for JS2 and rjsx modes
 
 Install JS2 mode for dealing with Javscript files
@@ -1134,6 +1148,14 @@ Add some custom functions that will help when in Projectile projects
     (with-temp-buffer
       (insert path)
       (clipboard-kill-region (point-min) (point-max)))))
+#+end_src
+** Compilation Mode Settings
+I want to have compilation buffers to have "special-mode"-like ability to quit on q
+#+begin_src emacs-lisp
+(defun eg/compilation-mode-q ()
+(local-set-key (kbd "q") 'kill-buffer-and-window))
+
+(add-hook 'compilation-mode-hook #'eg/compilation-mode-q)
 #+end_src
 ** Linting and Highlighting
 *** Flymake
