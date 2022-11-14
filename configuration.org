@@ -727,8 +727,26 @@ Add regex so we can link to file lines when using compilation mode for testing a
                          3 ;; column
                          )
             compilation-error-regexp-alist-alist))
+(setq compilation-error-regexp-alist-alist
+      (cons '(npm "^[  ]+at \\(?:[^\(\n]+ \(\\)?\\([a-zA-Z\.0-9_/-]+\\):\\([0-9]+\\):\\([0-9]+\\)\)?$"
+                         1 ;; file
+                         2 ;; line
+                         3 ;; column
+                         )
+            compilation-error-regexp-alist-alist))
+(setq compilation-error-regexp-alist-alist
+      (cons '(npx "^[  ]+at \\(?:[^\(\n]+ \(\\)?\\([a-zA-Z\.0-9_/-]+\\):\\([0-9]+\\):\\([0-9]+\\)\)?$"
+                         1 ;; file
+                         2 ;; line
+                         3 ;; column
+                         )
+            compilation-error-regexp-alist-alist))
 (setq compilation-error-regexp-alist
       (cons 'node compilation-error-regexp-alist))
+(setq compilation-error-regexp-alist
+      (cons 'npx compilation-error-regexp-alist))
+(setq compilation-error-regexp-alist
+      (cons 'npm compilation-error-regexp-alist))
 #+end_src
 
 Custom hooks for JS2 and rjsx modes
