@@ -118,10 +118,19 @@ setup for today's month and day combination"
          "-/app/assets/builds/"
          "-/tmp/")
        "\n"))
-(setq eg/idp-application-yml "development:
+
+(defun eg/get-local-ip ()
+  "Return the string representation of the local ip address"
+  (let* ((get-ip-command "ipconfig getifaddr en0")
+         (command-result (shell-command-to-string get-ip-command)))
+    (string-trim command-result)))
+
+
+
+(setq eg/idp-application-yml (string-replace "<your-local-ip>" (eg/get-local-ip) "development:
   config_key:
   #domain_name: <your-local-ip>:3000
-  #mailer_domain_name: <your-local-ip>:3000")
+  #mailer_domain_name: <your-local-ip>:3000"))
 (setq eg/idp-dir-locals
       (prin1-to-string
        '((js2-mode . ((js2-basic-offset . 2)))
@@ -142,6 +151,44 @@ To be used on a fresh clone of the idp repo"
           (insert eg/idp-application-yml))
         (with-temp-file dir-locals-filename
           (insert eg/idp-dir-locals)))))
+(defun eg/idp-projectile-after-hook ()
+  (if
+      (string-match-p (regexp-quote "identity-idp") (projectile-project-root))
+      (progn
+        (message "==IDP PROJECTILE HOOK LOADED=="))))
+
+(add-hook 'projectile-after-switch-project-hook #'eg/idp-projectile-after-hook)
+
+
+(defun eg/idp-enable-https ()
+  "Set the application.yml file for local development"
+  (interactive)
+  (let ((application-yml-filename (concat (projectile-project-root) "config/application.yml"))
+        )
+    (with-temp-buffer
+    (find-file application-yml-filename)
+    (goto-char (point-min))
+    (perform-replace "  #domain_name:" "  domain_name:" nil nil nil)
+    (perform-replace "  #mailer_domain_name:" "  mailer_domain_name:" nil nil nil)
+    (save-buffer)
+    (kill-buffer)
+    )))
+
+(defun eg/idp-disable-https ()
+  "Set the application.yml file for local development"
+  (interactive)
+  (let ((application-yml-filename (concat (projectile-project-root) "config/application.yml"))
+        )
+    (with-temp-buffer
+    (find-file application-yml-filename)
+    (goto-char (point-min))
+    (perform-replace "  domain_name:" "  #domain_name:" nil nil nil)
+    (perform-replace "  mailer_domain_name:" "  #mailer_domain_name:" nil nil nil)
+    (save-buffer)
+    (kill-buffer)
+    )))
+
+
 
 (defun eg/idp-mocha-this-file ()
   "Run Mocha on the current test file.
