@@ -42,7 +42,7 @@ Install `use-package` for package configuration
 Put custom defined variables in a separate file and load that file if it's there.
 
 #+begin_src emacs-lisp
-(setq custom-file (concat user-emacs-directory "/custom.el"))
+(setq custom-file (concat user-emacs-directory "custom.el"))
 (load-file custom-file)
 #+end_src
 
@@ -122,7 +122,7 @@ These initial defaults have been taken from an old config. Consider modifying an
     :bind
     ("C-c l" . lin-mode))
 #+end_src
-**** Use Iosevka for the default font
+**** Default font settings
 #+begin_src emacs-lisp
 (set-face-attribute 'default nil :font "DinaRemasterII" :weight 'regular :height 170)
 #+end_src
@@ -162,6 +162,18 @@ Use Unicode fonts so that we can have civilized text.
 (set-fontset-font t 'symbol "Symbola" nil 'append)
 #+end_src
 
+** Dired Settings
+Give us somewhat sane looking output:
+#+begin_src emacs-lisp
+(setq dired-listing-switches "-o")
+#+end_src
+
+#+begin_src emacs-lisp
+(use-package all-the-icons-dired
+  :hook ((dired-mode . all-the-icons-dired-mode)
+         (dired-mode . dired-hide-details-mode)
+         (dired-mode . hl-line-mode)))
+#+end_src
 ** Text Encoding
 Use utf-8 as much as possible
 (taken from https://github.com/rougier/dotemacs/blob/master/dotemacs.org)
@@ -681,8 +693,7 @@ For future reference, the following prevents super weird indentation rules in th
 (defun eg/ruby-mode-hook ()
   (setq ruby-indent-level 2
         ruby-indent-tabs-mode nil)
-  (company-mode)
-  (eglot-ensure))
+  (company-mode))
 (use-package enh-ruby-mode
   :hook
   (enh-ruby-mode . eg/ruby-mode-hook)
@@ -709,7 +720,23 @@ Add rubocop for linting
    (enh-ruby-mode . rubocop-mode)
    :diminish rubocop-mode)
 #+end_src
+**** Rspec Settings
+#+begin_src emacs-lisp
+;; (use-package rspec-mode
+;; :config (setq rspec-use-rvm nil))
+;; (add-to-list 'auto-mode-alist '(".spec\\.rb\\'" . rspec-mode))
 
+#+end_src
+**** Robe Environment Settings
+#+begin_src emacs-lisp
+(use-package robe
+  :after (company)
+  :hook (enh-ruby-mode . robe-mode)
+  :config ((lambda ()
+             (push 'company-robe company-backends)))
+  )
+(advice-add 'inf-ruby-console-auto :before #'rvm-activate-corresponding-ruby)
+#+end_src
 *** Node / NVM Settings
 #+begin_src emacs-lisp
 (use-package nvm
@@ -840,6 +867,13 @@ We use web-mode for editing HTML
 *** Markdown
 #+begin_src emacs-lisp
 (use-package markdown-mode)
+#+end_src
+Use grip mode for instant previews of markdown
+#+begin_src emacs-lisp
+(use-package grip-mode
+  :ensure t
+  :bind (:map markdown-mode-command-map
+         ("g" . grip-mode)))
 #+end_src
 *** YAML
 #+begin_src emacs-lisp
@@ -1086,6 +1120,12 @@ Modified from [[https://github.com/rougier/dotemacs/blob/master/dotemacs.org][ht
             org-return-follows-link t) ;Self explanatory
 #+end_src
 
+Use ~org-modern~ to make org mode start to look nice
+#+begin_src emacs-lisp
+(use-package org-modern
+:hook (org-mode . org-modern-mode))
+#+end_src
+
 Use some custom capture templates
 #+begin_src emacs-lisp
 (defun eg/get-project-org-capture-file ()
@@ -1112,6 +1152,34 @@ We provide some nice initial Babel settings, such as appropriate fonts for code 
               org-confirm-babel-evaluate nil     ; No confirmation before executing code
               org-edit-src-content-indentation 0 ; No relative indentation for code blocks
               org-fontify-whole-block-delimiter-line t) ; Fontify whole block
+#+end_src
+**** Font Settings
+#+begin_src emacs-lisp
+
+;; (setq eg/org-mode-font-family "Baskerville")
+;; (add-hook
+;;  'org-mode-hook
+;;  (lambda ()
+;;     (setq line-spacing 0.2) ;; Add more line padding for readability
+;;     ;; We set the variable pitch here because we are using semi-quoted
+;;     ;; for variables, which apparently does not work with use-package's
+;;     ;; basic :custom-face capability
+;;     (custom-set-faces `(variable-pitch ((t (:family ,eg/org-mode-font-family)))))
+;;     (variable-pitch-mode 1) ;; All fonts with variable pitch.
+;;     (text-scale-adjust 3) ;; Adjust text scale
+;;     (mapc
+;;      (lambda (face) ;; Other fonts with fixed-pitch.
+;;        (set-face-attribute face nil :inherit 'fixed-pitch))
+;;      (list 'org-code
+;;            'org-link
+;;            'org-block
+;;            'org-table
+;;            'org-verbatim
+;;            'org-block-begin-line
+;;            'org-block-end-line
+;;            'org-meta-line
+;;            'org-document-info-keyword))))
+;; (message "Using macbook-m1.lan org font settings")
 #+end_src
 ** Dired and Dirvish
 *** Dirvish :INACTIVE:
@@ -1261,6 +1329,12 @@ Enable `nano-mode`, if it's available
 #+end_src
 
 Set the default cursor for all buffers and frames to be a box
+*** Custom Variables
+#+begin_src emacs-lisp
+(defcustom eg/irc-password nil "Default password to use for irc" :group 'eg)
+;; More custom vars here
+(load custom-file)
+#+end_src
 *** IRC Settings
 I use a custom interactive function to get my IRC password at startup. It is then saved in a custom variable for future sessions. Or at least, that was the idea. For some reason it asks every time I start Emacs...
 #+begin_src emacs-lisp
@@ -1272,8 +1346,7 @@ rcirc authinfo list for Freenode"
   (customize-save-variable 'rcirc-authinfo `(("libera" nickserv "darth-cheney" ,eg/irc-password)))
   (customize-save-variable 'rcirc-default-nick "darth-cheney"))
 
-(if (not (boundp 'eg/irc-password))
+(if (or (not (boundp 'eg/irc-password)) (equal eg/irc-password nil))
     (progn
-      (defcustom eg/irc-password nil "Default password to use for IRC connections")
       (call-interactively 'eg/get-irc-password)))
 #+end_src

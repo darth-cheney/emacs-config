@@ -1,6 +1,22 @@
 (defcustom eg/projects-directory nil "Default directory for all programming projects")
 (defcustom eg/simpletalk-repo nil "Default SimpleTalk respository location")
 
+
+(defun eg/adjust-default-font-size ()
+  "Adjust the default font size"
+  (interactive)
+  (let ((size (read-string "New font height")))
+    (set-face-attribute 'default nil :height (string-to-number size))))
+
+(defun eg/open-config-file ()
+  "Open my Emacs literate configuration org file"
+  (interactive)
+  (let ((path (concat user-emacs-directory "configuration.org")))
+    (find-file path)))
+
+(global-set-key (kbd "C-c c") 'eg/open-config-file)
+
+
 (defun eg/get-project-dirs-alist (dir-name repo-name)
   (let* ((result-list '()))
     (add-to-list
@@ -116,7 +132,10 @@ setup for today's month and day combination"
          "-/public/acuant/"
          "-/public/packs/"
          "-/app/assets/builds/"
-         "-/tmp/")
+         "-/tmp/"
+         "-/**/node_modules/"
+         "-node_modules/*"
+         "-/log/")
        "\n"))
 
 (defun eg/get-local-ip ()
@@ -127,11 +146,11 @@ setup for today's month and day combination"
 
 
 
-(setq eg/idp-application-yml (string-replace "<your-local-ip>" (eg/get-local-ip) "development:
+(defvar eg/idp-application-yml (string-replace "<your-local-ip>" (eg/get-local-ip) "development:
   config_key:
   #domain_name: <your-local-ip>:3000
   #mailer_domain_name: <your-local-ip>:3000"))
-(setq eg/idp-dir-locals
+(defvar eg/idp-dir-locals
       (prin1-to-string
        '((js2-mode . ((js2-basic-offset . 2)))
          (typescriptreact-mode . ((typescript-indent-level . 2))))))
@@ -151,14 +170,6 @@ To be used on a fresh clone of the idp repo"
           (insert eg/idp-application-yml))
         (with-temp-file dir-locals-filename
           (insert eg/idp-dir-locals)))))
-(defun eg/idp-projectile-after-hook ()
-  (if
-      (string-match-p (regexp-quote "identity-idp") (projectile-project-root))
-      (progn
-        (message "==IDP PROJECTILE HOOK LOADED=="))))
-
-(add-hook 'projectile-after-switch-project-hook #'eg/idp-projectile-after-hook)
-
 
 (defun eg/idp-enable-https ()
   "Set the application.yml file for local development"
@@ -187,6 +198,20 @@ To be used on a fresh clone of the idp repo"
     (save-buffer)
     (kill-buffer)
     )))
+
+(defun eg/toggle-nano-theme ()
+  "Toggle between light and dark nano themes.
+Will update the modeline as needed"
+  (interactive)
+  (if (not (boundp 'eg/nano-current-theme))
+      (defvar eg/nano-current-theme nano-theme--current))
+  (cond
+   ((equal eg/nano-current-theme 'light) (setq eg/nano-current-theme 'dark))
+   ((equal eg/nano-current-theme 'dark) (setq eg/nano-current-theme 'light)))
+  (nano-modeline-mode nil)
+  (eval `(,(intern (concat "nano-" (symbol-name eg/nano-current-theme)))))
+  (nano-modeline-mode 1)
+  eg/nano-current-theme)
 
 
 
