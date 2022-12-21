@@ -214,6 +214,13 @@ Will update the modeline as needed"
   eg/nano-current-theme)
 
 
+(defun eg/set-nodeenv-env (&optional nodeenv-path)
+  (interactive)
+  (let* ((base-path (or nodeenv-path "./nodeenv"))
+         (source-path (concat base-path "/bin/activate")))
+    (message (shell-command-to-string (concat "source " source-path " && echo $(env)")))))
+
+
 
 (defun eg/idp-mocha-this-file ()
   "Run Mocha on the current test file.
@@ -223,3 +230,28 @@ and open in a compilation buffer"
    (concat "cd " (projectile-project-root) " && npx mocha " (eg/project-filename))
    t))
 (global-set-key (kbd "C-c t") #'eg/idp-mocha-this-file)
+
+
+(defun eg/get-matching-project-files-list (&rest terms)
+  "Return a list of current Projectile files that contain the terms
+in the path or filename"
+  (message (prin1-to-string terms))
+  (let* ((project-root (projectile-acquire-root))
+         (files (projectile-project-files project-root)))
+    (seq-filter
+     (lambda (filename)
+       (-all-p (lambda (term) (string-match-p (regexp-quote term) filename)) terms))
+     files)))
+
+(defun eg/idp-run-specs-matching (&rest terms)
+  (interactive)
+  (let* ((terms (if (interactive-p)
+                   (split-string
+                    (read-string "Terms: ") " ")
+                 terms))
+         (files (progn
+                  (push "_spec" terms)
+                  (apply 'eg/get-matching-project-files-list terms)))
+         (cmd-str (concat "rspec " (string-join files " "))))
+    
+    (compile cmd-str t)))

@@ -124,7 +124,15 @@ These initial defaults have been taken from an old config. Consider modifying an
 #+end_src
 **** Default font settings
 #+begin_src emacs-lisp
-(set-face-attribute 'default nil :font "DinaRemasterII" :weight 'regular :height 170)
+;;(set-face-attribute 'default nil :font "DinaRemasterII" :weight 'regular :height 170)
+#+end_src
+
+Add a custom interactive for setting the font height
+#+begin_src emacs-lisp
+(defun eg/set-default-font-height ()
+  (interactive)
+  (let ((num (read-number "Enter new font height:  ")))
+    (set-face-attribute 'default nil :height num)))
 #+end_src
 *** Opacity Related Settings
 In the end, the following keybindings will be available:
@@ -281,8 +289,7 @@ Ensure that when we switch themes, we reset the cursor to be a block type
     (message "eg/after-theme-load!")
     (setq-default cursor-type 'box)
     (nano-modeline-mode 1)
-  (advice-add 'load-theme :after 'eg/after-theme-load)
-  (advice-add 'counsel-load-theme :after 'eg/after-theme-load))
+  (advice-add 'load-theme :after 'eg/after-theme-load))
 #+end_src
 
 Load the nano-light theme as the default
@@ -499,7 +506,46 @@ Setup minibuffer with the custom header line
 
 (add-hook 'minibuffer-setup-hook #'my/minibuffer-setup)
 #+end_src
-** Counsel Settings
+** Completion Settings
+*** Savehist
+#+begin_src emacs-lisp
+    (use-package savehist
+      :config (savehist-mode 1))
+#+end_src
+*** Vertico
+#+begin_src emacs-lisp
+  (use-package vertico
+    :custom (vertico-cycle t)
+    :config (vertico-mode))
+#+end_src
+*** Corfu
+#+begin_src emacs-lisp
+(use-package corfu
+  :ensure t
+  :custom (corfu-cycle t)
+  :config (global-corfu-mode))
+#+end_src
+*** Orderless
+#+begin_src emacs-lisp
+(use-package orderless
+  :custom ((completion-styles '(orderless))))
+#+end_src
+*** Consult
+#+begin_src emacs-lisp
+(use-package consult)
+#+end_src
+*** Consult-Dir
+Used for switching directories
+#+begin_src emacs-lisp
+(use-package consult-dir)
+#+end_src
+*** Marginalia
+#+begin_src emacs-lisp
+(use-package marginalia
+  :custom (marginalia-annotators '(marginalia-annotators-heavy marginalia-annotators-light nil))
+  :config (marginalia-mode))
+#+end_src
+** Counsel Settings :INACTIVE:
 We use Counsel in combination with Ivy in order to have a rich completion interface in the minibuffer.
 #+begin_src emacs-lisp
 (use-package counsel
@@ -519,7 +565,7 @@ We use Counsel in combination with Ivy in order to have a rich completion interf
 	     :config
 	     (setq which-key-idle-delay 1))
 #+end_src
-** Ivy Configuration
+** Ivy Configuration :INACTIVE:
 Use Ivy as the completion frontend
 #+begin_src emacs-lisp
 (use-package ivy
@@ -562,9 +608,9 @@ Helpful is a better help interface that interacts with the built-in Emacs docume
 	     (counsel-describe-function-function #'helpful-callable)
 	     (counsel-describe-variable-function #'helpful-variable)
 	     :bind
-	     ([remap describe-function] . counsel-describe-function)
+	     ([remap describe-function] . helpful-describe-function)
 	     ([remap describe-command] . helpful-command)
-	     ([remap describe-variable] . counsel-describe-variable)
+	     ([remap describe-variable] . helpful-describe-variable)
 	     ([remap describe-key] . helpful-key))
 #+end_src
 
@@ -1181,6 +1227,12 @@ We provide some nice initial Babel settings, such as appropriate fonts for code 
 ;;            'org-document-info-keyword))))
 ;; (message "Using macbook-m1.lan org font settings")
 #+end_src
+** Eshell Settings
+*** Themes
+#+begin_src emacs-lisp
+(use-package eshell-git-prompt
+)
+#+end_src
 ** Dired and Dirvish
 *** Dirvish :INACTIVE:
 We are using Dirvish as a substitute for Dired mode (_INACTIVE_) 
@@ -1234,6 +1286,13 @@ Add some custom functions that will help when in Projectile projects
     (with-temp-buffer
       (insert path)
       (clipboard-kill-region (point-min) (point-max)))))
+#+end_src
+*** Custom Projectile Project Types
+**** Deno
+#+begin_src emacs-lisp
+(projectile-register-project-type 'deno '("deno.json")
+  :project-file "deno.json"
+  :run "deno task start")
 #+end_src
 ** Compilation Mode Settings
 I want to have compilation buffers to have "special-mode"-like ability to quit on q
