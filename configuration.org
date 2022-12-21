@@ -532,7 +532,8 @@ Setup minibuffer with the custom header line
 #+end_src
 *** Consult
 #+begin_src emacs-lisp
-(use-package consult)
+  (use-package consult
+    :bind ("C-s" . consult-line))
 #+end_src
 *** Consult-Dir
 Used for switching directories
