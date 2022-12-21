@@ -1230,8 +1230,11 @@ We provide some nice initial Babel settings, such as appropriate fonts for code 
 ** Eshell Settings
 *** Themes
 #+begin_src emacs-lisp
-(use-package eshell-git-prompt
-)
+    (use-package eshell-git-prompt
+      :ensure t)
+    (defun eg/eshell-mode-hook ()
+          (use-theme 'powerline))
+        (add-hook 'eshell-mode-hook 'eg/eshell-mode-hook)
 #+end_src
 ** Dired and Dirvish
 *** Dirvish :INACTIVE:
