@@ -1442,6 +1442,17 @@ We need to whitelist certain unsafe variables as safe, when setting using a dir-
 #+begin_src emacs-lisp
 ()
 #+end_src
+** Work Related
+*** Login.gov
+#+begin_src emacs-lisp
+(use-package idp
+  :ensure t
+  :straight '(idp :type git :host github :repo "18F/idp-emacs"))
+#+end_src
+
+#+RESULTS:
+: t
+
 ** Load Further Custom Functions
 We provide a host of over custom functions in a separate file
 #+begin_src emacs-lisp
