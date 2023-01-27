@@ -533,7 +533,8 @@ Setup minibuffer with the custom header line
 *** Consult
 #+begin_src emacs-lisp
   (use-package consult
-    :bind ("C-s" . consult-line))
+    :bind (("C-s" . consult-line)
+              ("C-x b" . consult-buffer)))
 #+end_src
 *** Consult-Dir
 Used for switching directories
@@ -609,9 +610,9 @@ Helpful is a better help interface that interacts with the built-in Emacs docume
 	     (counsel-describe-function-function #'helpful-callable)
 	     (counsel-describe-variable-function #'helpful-variable)
 	     :bind
-	     ([remap describe-function] . helpful-describe-function)
+	     ([remap describe-function] . helpful-function)
 	     ([remap describe-command] . helpful-command)
-	     ([remap describe-variable] . helpful-describe-variable)
+	     ([remap describe-variable] . helpful-variable)
 	     ([remap describe-key] . helpful-key))
 #+end_src
 
@@ -793,34 +794,34 @@ Add rubocop for linting
 *** Javascript/JSX Settings
 Add regex so we can link to file lines when using compilation mode for testing and debugging
 #+begin_src emacs-lisp
-;; Add NodeJS error format
-(setq compilation-error-regexp-alist-alist
-      (cons '(node "^[  ]+at \\(?:[^\(\n]+ \(\\)?\\([a-zA-Z\.0-9_/-]+\\):\\([0-9]+\\):\\([0-9]+\\)\)?$"
-                         1 ;; file
-                         2 ;; line
-                         3 ;; column
-                         )
-            compilation-error-regexp-alist-alist))
-(setq compilation-error-regexp-alist-alist
-      (cons '(npm "^[  ]+at \\(?:[^\(\n]+ \(\\)?\\([a-zA-Z\.0-9_/-]+\\):\\([0-9]+\\):\\([0-9]+\\)\)?$"
-                         1 ;; file
-                         2 ;; line
-                         3 ;; column
-                         )
-            compilation-error-regexp-alist-alist))
-(setq compilation-error-regexp-alist-alist
-      (cons '(npx "^[  ]+at \\(?:[^\(\n]+ \(\\)?\\([a-zA-Z\.0-9_/-]+\\):\\([0-9]+\\):\\([0-9]+\\)\)?$"
-                         1 ;; file
-                         2 ;; line
-                         3 ;; column
-                         )
-            compilation-error-regexp-alist-alist))
-(setq compilation-error-regexp-alist
-      (cons 'node compilation-error-regexp-alist))
-(setq compilation-error-regexp-alist
-      (cons 'npx compilation-error-regexp-alist))
-(setq compilation-error-regexp-alist
-      (cons 'npm compilation-error-regexp-alist))
+  ;; Add NodeJS error format
+  ;; (setq compilation-error-regexp-alist-alist
+  ;;       (cons '(node "^[  ]+at \\(?:[^\(\n]+ \(\\)?\\([a-zA-Z\.0-9_/-]+\\):\\([0-9]+\\):\\([0-9]+\\)\)?$"
+  ;;                          1 ;; file
+  ;;                          2 ;; line
+  ;;                          3 ;; column
+  ;;                          )
+  ;;             compilation-error-regexp-alist-alist))
+  ;; (setq compilation-error-regexp-alist-alist
+  ;;       (cons '(npm "^[  ]+at \\(?:[^\(\n]+ \(\\)?\\([a-zA-Z\.0-9_/-]+\\):\\([0-9]+\\):\\([0-9]+\\)\)?$"
+  ;;                          1 ;; file
+  ;;                          2 ;; line
+  ;;                          3 ;; column
+  ;;                          )
+  ;;             compilation-error-regexp-alist-alist))
+  ;; (setq compilation-error-regexp-alist-alist
+  ;;       (cons '(npx "^[  ]+at \\(?:[^\(\n]+ \(\\)?\\([a-zA-Z\.0-9_/-]+\\):\\([0-9]+\\):\\([0-9]+\\)\)?$"
+  ;;                          1 ;; file
+  ;;                          2 ;; line
+  ;;                          3 ;; column
+  ;;                          )
+  ;;             compilation-error-regexp-alist-alist))
+  ;; (setq compilation-error-regexp-alist
+  ;;       (cons 'node compilation-error-regexp-alist))
+  ;; (setq compilation-error-regexp-alist
+  ;;       (cons 'npx compilation-error-regexp-alist))
+  ;; (setq compilation-error-regexp-alist
+  ;;       (cons 'npm compilation-error-regexp-alist))
 #+end_src
 
 Custom hooks for JS2 and rjsx modes
@@ -1233,8 +1234,71 @@ We provide some nice initial Babel settings, such as appropriate fonts for code 
 #+begin_src emacs-lisp
     (use-package eshell-git-prompt
       :ensure t)
+
+#+end_src
+
+#+begin_src emacs-lisp
+;; Custom eshell-git-prompt theme
+(defun eshell-git-prompt-nano-powerline ()
+  (let ((segment-separator "\xe0b0")
+        (branch            "\xe0a0")
+        (detached          "\x27a6")
+        (cross             "\x2718")
+        dir git git-face)
+    (setq dir
+          (propertize
+           (concat
+            " "
+            (unless (eshell-git-prompt-exit-success-p)
+              (concat cross " "))
+            (eshell-git-prompt-powerline-dir)
+            " ")
+           'face 'nano-salient-i))
+    (setq git
+          (when (eshell-git-prompt--git-root-dir)
+            (setq git-face
+                  (if (eshell-git-prompt--collect-status)
+                      'nano-popout-i
+                    'nano-faded-i))
+            (setq eshell-git-prompt-branch-name (eshell-git-prompt--branch-name))
+            (propertize
+             (concat " "
+                     (-if-let (branch-name eshell-git-prompt-branch-name)
+                         (concat branch " " branch-name)
+                       (concat detached " "(eshell-git-prompt--commit-short-sha)))
+                     " ")
+             'face git-face)))
+    (eshell-git-prompt---str-read-only
+     (concat
+      (if git
+          (concat dir
+                  (with-face segment-separator
+                    :foreground (face-background 'nano-salient-i)
+                    :background (face-background git-face))
+                  git
+                  (with-face segment-separator
+                    :foreground (face-background 'nano-popout-i)))
+        (concat dir
+                (with-face segment-separator
+                  :foreground (face-background 'nano-salient))))
+      (propertize "$" 'invisible t) " "))))
+
+(add-to-list 'eshell-git-prompt-themes '(nano-powerline eshell-git-prompt-nano-powerline eshell-git-prompt-powerline-regexp))
+#+end_src
+
+#+RESULTS:
+| nano-powerline | eshell-git-prompt-nano-powerline | eshell-git-prompt-powerline-regexp    |
+| robbyrussell   | eshell-git-prompt-robbyrussell   | eshell-git-prompt-robbyrussell-regexp |
+| git-radar      | eshell-git-prompt-git-radar      | eshell-git-prompt-git-radar-regexp    |
+| powerline      | eshell-git-prompt-powerline      | eshell-git-prompt-powerline-regexp    |
+| multiline      | eshell-git-prompt-multiline      | eshell-git-prompt-multiline-regexp    |
+| multiline2     | eshell-git-prompt-multiline2     | eshell-git-prompt-multiline2-regexp   |
+| simple         | eshell-git-prompt-simple         | eshell-git-prompt-simple-regexp       |
+| default        | eshell-git-prompt-default-func   | eshell-git-prompt-default-regexp      |
+
+#+begin_src emacs-lisp
     (defun eg/eshell-mode-hook ()
-          (use-theme 'powerline))
+         (eshell-git-prompt-use-theme 'powerline))
         (add-hook 'eshell-mode-hook 'eg/eshell-mode-hook)
 #+end_src
 ** Dired and Dirvish
@@ -1250,7 +1314,7 @@ We are using Dirvish as a substitute for Dired mode (_INACTIVE_)
 *** Dired
 We want to open directories in the same window when clicking them
 #+begin_src emacs-lisp
-(define-key dired-mode-map [mouse-2] 'dired-mouse-find-file)
+;;(define-key dired-mode-map [mouse-2] 'dired-mouse-find-file)
 #+end_src
 ** Projectile Settings
 Projectile is a package used for project management. It has many useful features, not least among them a project-wide grep within files.
@@ -1258,8 +1322,7 @@ Projectile is a package used for project management. It has many useful features
 (use-package projectile
   :ensure t
   :diminish projectile-mode
-  :config (projectile-mode)
-  :custom ((projectile-completion-system 'ivy))
+  :config (projectile-mode +1)
   :bind-keymap
   ("C-c p" . projectile-command-map)
   :init
@@ -1294,9 +1357,9 @@ Add some custom functions that will help when in Projectile projects
 *** Custom Projectile Project Types
 **** Deno
 #+begin_src emacs-lisp
-(projectile-register-project-type 'deno '("deno.json")
+(add-hook 'projectile-mode-hook (lambda ()(projectile-register-project-type 'deno '("deno.json")
   :project-file "deno.json"
-  :run "deno task start")
+  :run "deno task start")))
 #+end_src
 ** Compilation Mode Settings
 I want to have compilation buffers to have "special-mode"-like ability to quit on q
