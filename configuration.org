@@ -1316,6 +1316,10 @@ We want to open directories in the same window when clicking them
 #+begin_src emacs-lisp
 ;;(define-key dired-mode-map [mouse-2] 'dired-mouse-find-file)
 #+end_src
+** RESTClient Mode
+#+begin_src emacs-lisp
+(use-package restclient)
+#+end_src
 ** Projectile Settings
 Projectile is a package used for project management. It has many useful features, not least among them a project-wide grep within files.
 #+begin_src emacs-lisp
