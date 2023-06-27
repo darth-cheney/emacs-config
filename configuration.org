@@ -1,4 +1,4 @@
-#+TITLE: Emacs Literatie Configuration
+#+TITLE: Emacs Literate Configuration
 #+AUTHOR: Eric Gade (darth-cheney)
 #+STARTUP: show2levels indent hidestars
 #+PROPERTY: header-args :tangle (let ((org-use-tag-inheritance t)) (if (member "INACTIVE" (org-get-tags))  "no" "~/.emacs.d/init.el")))
@@ -16,6 +16,7 @@ The following code will be placed into the [[file:early.init.el][early-init.el]]
 ** Package Management
 Set us up to use `straight.el` as the main package manager
 #+begin_src emacs-lisp
+(setq straight-repository-branch "develop")
 (defvar bootstrap-version)
 (let ((bootstrap-file
        (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
@@ -87,16 +88,21 @@ Ignore Common Lisp deprecation warnings
 (setq byte-compile-warnings '(cl-functions))
 #+end_src
 
-** Basic UI Settings
+** Basic UI Settings  
 #+begin_src emacs-lisp
   (scroll-bar-mode -1)      ; Disable visible scrollbar
   (tool-bar-mode -1)         ; Disable the toolbar
   (tooltip-mode -1)            ; Disable tooltips
   (set-fringe-mode 10)      ; Give some breathing room
-  (menu-bar-mode -1)      ; Disable the menu bar
+  (menu-bar-mode 0)      ; Disable the menu bar
 
   (column-number-mode)
   (global-display-line-numbers-mode t) ;; Display line numbers globally
+
+  ;; If we are in Emacs 29 or higher, use
+  ;; precision scrolling mode for smooth scrolling
+  (if (not (version< emacs-version "29.0"))
+    (pixel-scroll-precision-mode 1))
 
   ;; Disable line numbering in these modes:
   (dolist (mode '(org-mode-hook
@@ -116,7 +122,7 @@ Ignore Common Lisp deprecation warnings
 (setq gnutls-algorithm-priority "NORMAL:-VERS-TLS1.3")
 #+end_src
 
-** Comprehensive UI Settings
+** Comprehensive UI Settings 
 These initial defaults have been taken from an old config. Consider modifying and/or removing as needed.
 #+begin_src emacs-lisp
   (setq-default
@@ -317,10 +323,9 @@ Ensure that when we switch themes, we reset the cursor to be a block type
 
 Load the nano-light theme as the default
 #+begin_src emacs-lisp
-  ;(load-theme 'nano-light t)
-  (nano-mode)
-  (load-theme 'nano-light t)
-  (setq-default cursor-type 'box)
+(nano-mode)
+(load-theme 'nano-light t)
+(setq-default cursor-type 'box)
 #+end_src
 ** Modeline Setup
 
@@ -411,6 +416,12 @@ Custom Modeline Formats
         branch-name
       " ")))
 
+;; We have to redefine current-line for
+;; emacs 29+
+(defun current-line ()
+(count-lines
+                (point-min) (line-beginning-position)))
+ 
 (defun eg/nano-modeline-prog-mode ()
   (let* ((icon (plist-get (cdr (assoc 'prog-mode nano-modeline-mode-formats)) :icon))
          (buff-name (format-mode-line "%b"))
@@ -1026,6 +1037,8 @@ The following are the old settings for `lsp-mode`, which are currently _INACTIVE
   (add-to-list 'eglot-server-programs
    '((typescript-mode) "typescript-language-server" "--stdio"))
   (add-to-list 'eglot-server-programs
+   '((typescriptreact-mode) "typescript-language-server" "--stdio"))
+  (add-to-list 'eglot-server-programs
   '(enh-ruby-mode "solargraph" "socket" "--port" :autoport))
   )
 #+end_src
@@ -1480,7 +1493,6 @@ We need to whitelist certain unsafe variables as safe, when setting using a dir-
 *** Login.gov
 #+begin_src emacs-lisp
 (use-package idp
-  :ensure t
   :bind (("C-c i" . idp-main-transient))
   :straight '(idp :type git :host github :repo "18F/idp-emacs"))
 #+end_src
