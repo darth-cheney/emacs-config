@@ -52,6 +52,12 @@ Tell us if the system is a Mac or not
 (defconst *is-a-mac* (eq system-type 'darwin))
 #+end_src
 
+Tell us if the system is a personal laptop
+#+begin_src emacs-lisp
+(defconst *is-m1-laptop* (equal system-name "macbook-m1.lan"))
+(if *is-m1-laptop* (message "System appears to be an M1 Macbook"))
+#+end_src
+
 Set default font and size based on the system being used (currently _INACTIVE_)
 #+begin_src emacs-lisp
 ;; (defvar eric-custom/default-font-size 130)
@@ -113,7 +119,8 @@ Ignore Common Lisp deprecation warnings
                   elpher-mode-hook
                   dired-mode-hook
                   markdown-mode-hook
-                  ement-mode-hook))
+                  ement-mode-hook
+                  eat-mode-hook))
     (add-hook mode (lambda () (display-line-numbers-mode 0))))
 
 (defconst *spell-check-support-enabled* nil) ;; Enable with t if you prefer
@@ -202,13 +209,13 @@ Use Unicode fonts so that we can have civilized text.
 ** Dired Settings
 Give us somewhat sane looking output:
 #+begin_src emacs-lisp
-(setq dired-listing-switches "-o")
+(setq dired-listing-switches "-la")
 #+end_src
 
 #+begin_src emacs-lisp
 (use-package all-the-icons-dired
   :hook ((dired-mode . all-the-icons-dired-mode)
-         (dired-mode . dired-hide-details-mode)
+         ;(dired-mode . dired-hide-details-mode)
          (dired-mode . hl-line-mode)))
 #+end_src
 ** Text Encoding
@@ -277,6 +284,28 @@ Use ~dwim-shell-command~ for on the fly command line integration
   :config
   )
 #+end_src
+** Eat Shell Integration
+The following ~straight~ install code is taken directly from the [[https://codeberg.org/akib/emacs-eat#user-content-headline-5][Eat repo]]
+#+begin_src emacs-lisp
+(straight-use-package
+ '(eat :type git
+       :host codeberg
+       :repo "akib/emacs-eat"
+       :files ("*.el" ("term" "term/*.el") "*.texi"
+               "*.ti" ("terminfo/e" "terminfo/e/*")
+               ("terminfo/65" "terminfo/65/*")
+               ("integration" "integration/*")
+               (:exclude ".dir-locals.el" "*-tests.el"))))
+#+end_src
+
+Additional hooks for eshell integration
+#+begin_src emacs-lisp
+;; For `eat-eshell-mode'.
+(add-hook 'eshell-load-hook #'eat-eshell-mode)
+
+;; For `eat-eshell-visual-command-mode'.
+;;(add-hook 'eshell-load-hook #'eat-eshell-visual-command-mode)
+#+end_src
 ** Basic Built-ins (straight)
 Make sure that plain modes are at the latest versions, using straight.
 #+begin_src emacs-lisp
@@ -304,7 +333,7 @@ Load the DOOM Themes, which are nice defaults. Note that we have _disabled_ the 
            )
 #+end_src
 
-Load the NANO theme
+*** Load the NANO theme
 #+begin_src emacs-lisp
     (use-package nano-theme
       :ensure nil
@@ -326,6 +355,12 @@ Load the nano-light theme as the default
 (nano-mode)
 (load-theme 'nano-light t)
 (setq-default cursor-type 'box)
+#+end_src
+
+*** Flexoki Theme
+#+begin_src emacs-lisp
+(use-package flexoki-themes
+  :straight '(flexoki-themes :type git :host github :repo "crmsnbleyd/flexoki-emacs-theme"))
 #+end_src
 ** Modeline Setup
 
@@ -556,7 +591,7 @@ Setup minibuffer with the custom header line
 #+begin_src emacs-lisp
 (use-package corfu
   :ensure t
-  :custom (corfu-cycle t)
+  :custom ((corfu-cycle t) (corfu-auto t))
   :config (global-corfu-mode))
 #+end_src
 *** Orderless
@@ -950,7 +985,8 @@ We need popwin to popup special Eglot modes
 *** HTML/Web Settings
 We use web-mode for editing HTML
 #+begin_src emacs-lisp
-(use-package web-mode)
+(use-package web-mode
+:custom (web-mode-enable-engine-detection t))
 (add-to-list 'auto-mode-alist '("\\.html?\\'" . web-mode))
 (add-to-list 'auto-mode-alist '("\\.erb?\\'" . web-mode))
 #+end_src
@@ -1053,7 +1089,12 @@ Tell LSP mode where to find your tsconfig file(s), when used. Taken from (https:
 ;;              '((typescript-mode) "typescript-language-server" "--stdio"))
 #+end_src
 
+*** Vue Settings
+#+begin_src emacs-lisp
+(use-package vue-mode)
 
+(add-to-list 'auto-mode-alist '("\\.vue\\'" . vue-mode))
+#+end_src
 *** ELisp Mode
 #+begin_src emacs-lisp
 (set-face-attribute 'show-paren-match nil :weight 'extra-bold :underline t)
@@ -1344,24 +1385,15 @@ We provide some nice initial Babel settings, such as appropriate fonts for code 
 (add-hook 'eshell-mode-hook 'eg/eshell-mode-hook)
 #+end_src
 
-** Dired and Dirvish
-*** Dirvish :INACTIVE:
-We are using Dirvish as a substitute for Dired mode (_INACTIVE_) 
-#+begin_src emacs-lisp
-(use-package dirvish
-  :ensure t
-  :init
-  ;; Let Dirvish take over Dired globally
-  (dirvish-override-dired-mode))
-#+end_src
-*** Dired
-We want to open directories in the same window when clicking them
-#+begin_src emacs-lisp
-;;(define-key dired-mode-map [mouse-2] 'dired-mouse-find-file)
-#+end_src
 ** RESTClient Mode
 #+begin_src emacs-lisp
 (use-package restclient)
+#+end_src
+** Grep and related
+*** Use [[https://github.com/mhayashi1120/Emacs-wgrep][wgrep]] for editable grep results
+#+begin_src emacs-lisp
+(use-package wgrep
+  :straight '(wgrep :type git :host github :repo "mhayashi1120/Emacs-wgrep"))
 #+end_src
 ** Projectile Settings
 Projectile is a package used for project management. It has many useful features, not least among them a project-wide grep within files.
@@ -1407,6 +1439,12 @@ Add some custom functions that will help when in Projectile projects
 (add-hook 'projectile-mode-hook (lambda ()(projectile-register-project-type 'deno '("deno.json")
   :project-file "deno.json"
   :run "deno task start")))
+#+end_src
+**** Eleventy
+#+begin_src emacs-lisp
+(defun eg/projectile-make-eleventy-type ()
+  (projectile-register-project-type 'eleventy '(".eleventy.js")))
+(add-hook 'projectile-mode-hook 'eg/projectile-make-eleventy-type)
 #+end_src
 ** Compilation Mode Settings
 I want to have compilation buffers to have "special-mode"-like ability to quit on q
@@ -1479,11 +1517,6 @@ Use a repository of preconfigured snippets
 #+begin_src emacs-lisp
 (use-package yasnippet-snippets)
 #+end_src
-
-
-
-
-
 ** Dir Local Setup
 We need to whitelist certain unsafe variables as safe, when setting using a dir-locals file:
 #+begin_src emacs-lisp
@@ -1504,11 +1537,6 @@ We provide a host of over custom functions in a separate file
 #+end_src
 
 ** Finally
-Enable `nano-mode`, if it's available
-#+begin_src emacs-lisp
-;;(nano-mode)
-#+end_src
-
 Set the default cursor for all buffers and frames to be a box
 *** Custom Variables
 #+begin_src emacs-lisp
@@ -1530,4 +1558,12 @@ rcirc authinfo list for Freenode"
 (if (or (not (boundp 'eg/irc-password)) (equal eg/irc-password nil))
     (progn
       (call-interactively 'eg/get-irc-password)))
+#+end_src
+*** M1 Custom Default Font
+If we are on the M1 Laptop, use the quattro font
+#+begin_src emacs-lisp
+(if *is-m1-laptop*
+  (progn
+    (set-face-attribute 'default nil :family "iA Writer Quattro V" :height 170 :weight 'light)
+    (message "Set M1 font family!")))
 #+end_src
