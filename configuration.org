@@ -206,6 +206,17 @@ Use Unicode fonts so that we can have civilized text.
 (set-fontset-font t 'symbol "Symbola" nil 'append)
 #+end_src
 
+** Environment Variable Settings
+*** Guile settings for macOS
+On macOS, emacs does not open with the environment variables exported in ~.zshrc~. Instead we will set them using Elisp:
+#+begin_src emacs-lisp
+(if *is-a-mac*
+  (progn
+    (setenv "GUILE_TLS_CERTIFICATE_DIRECTORY" "/opt/homebrew/etc/gnutls/")
+    (setenv "GUILE_LOAD_PATH" "/opt/homebrew/share/guile/site/3.0")
+    (setenv "GUILE_LOAD_COMPILED_PATH" "/opt/homebrew/lib/guile/3.0/site-ccache")
+    (setenv "GUILE_SYSTEM_EXTENSIONS_PATH" "/opt/homebrew/lib/guile/3.0/extensions")))
+#+end_src
 ** Dired Settings
 Give us somewhat sane looking output:
 #+begin_src emacs-lisp
@@ -304,7 +315,7 @@ Additional hooks for eshell integration
 (add-hook 'eshell-load-hook #'eat-eshell-mode)
 
 ;; For `eat-eshell-visual-command-mode'.
-;;(add-hook 'eshell-load-hook #'eat-eshell-visual-command-mode)
+(add-hook 'eshell-load-hook #'eat-eshell-visual-command-mode)
 #+end_src
 ** Basic Built-ins (straight)
 Make sure that plain modes are at the latest versions, using straight.
@@ -355,6 +366,11 @@ Load the nano-light theme as the default
 (nano-mode)
 (load-theme 'nano-light t)
 (setq-default cursor-type 'box)
+#+end_src
+
+But set the background color to use [[https://stephango.com/flexoki][Flexoki]] light background
+#+begin_src emacs-lisp
+(set-background-color "#FFFCF0")
 #+end_src
 
 *** Flexoki Theme
@@ -1380,7 +1396,7 @@ We provide some nice initial Babel settings, such as appropriate fonts for code 
 
 #+begin_src emacs-lisp
 (defun eg/eshell-mode-hook ()
-(eshell-git-prompt-use-theme 'nano-powerline))
+  (eshell-git-prompt-use-theme 'nano-powerline))
          
 (add-hook 'eshell-mode-hook 'eg/eshell-mode-hook)
 #+end_src
