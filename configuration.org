@@ -1467,6 +1467,25 @@ We need to whitelist certain unsafe variables as safe, when setting using a dir-
   :straight '(idp :type git :host github :repo "18F/idp-emacs"))
 #+end_src
 
+** Nodeenv Sourcing
+This function lets us source a nodeenv inside of eshell
+#+begin_src emacs-lisp
+(defun source-nodeenv (path)
+  (let* ((cmd (format "zsh -c \"source %s/bin/activate && printenv\"" path))
+        (cmd-output (shell-command-to-string cmd))
+        (lines (s-split "\n" cmd-output))
+        (variables-alist (mapcar
+                          (lambda (line)
+                            (let ((split (s-split "=" line)))
+                              (cons (car split) (cadr split))))
+                          lines))
+        (current-env (mapcar #'copy-sequence process-environment)))
+    (mapc
+     (lambda (pair)
+       (setenv (car pair) (cdr pair)))
+     variables-alist)
+    (setq eg/nodeenv--stashed-current-env current-env)))
+#+end_src
 ** Load Further Custom Functions
 We provide a host of over custom functions in a separate file
 #+begin_src emacs-lisp
