@@ -357,7 +357,6 @@ Ensure that when we switch themes, we reset the cursor to be a block type
   (defun eg/after-theme-load (_theme &rest args)
     (message "eg/after-theme-load!")
     (setq-default cursor-type 'box)
-    (nano-modeline-mode 1)
   (advice-add 'load-theme :after 'eg/after-theme-load))
 #+end_src
 
@@ -367,165 +366,41 @@ Load the nano-light theme as the default
 (load-theme 'nano-light t)
 (setq-default cursor-type 'box)
 #+end_src
-
-But set the background color to use [[https://stephango.com/flexoki][Flexoki]] light background
-#+begin_src emacs-lisp
-(set-background-color "#FFFCF0")
-#+end_src
-
 *** Flexoki Theme
 #+begin_src emacs-lisp
 (use-package flexoki-themes
   :straight '(flexoki-themes :type git :host github :repo "crmsnbleyd/flexoki-emacs-theme"))
 #+end_src
 ** Modeline Setup
-
-Use the DOOM Modeline (currently _INACTIVE_)
-#+begin_src emacs-lisp
-;; (use-package doom-modeline
-;; 	    :init (doom-modeline-mode 1)
-;; 	    :custom ((doom-modeline-height 40)))
-#+end_src
-
-Use the NANO modeline
+*** NANO modeline
 #+begin_src emacs-lisp
   (use-package nano-modeline
-    :straight '(nano-modeline :type git :host github :repo "rougier/nano-modeline"))
+    :straight '(nano-modeline :type git :host github :repo "rougier/nano-modeline")
+    :config (nano-modeline-text-mode t))
 #+end_src
 
-Use the following nano-modeline settings, taken from
-https://raw.githubusercontent.com/rougier/dotemacs/master/dotemacs.org
+Set up the known specific modes to work with the provided NANO versions:
 #+begin_src emacs-lisp
-(setq nano-modeline-prefix 'status)
-(setq nano-modeline-prefix-padding 1)
-
-(set-face-attribute 'header-line nil)
-(set-face-attribute 'mode-line nil
-                    :foreground (face-foreground 'nano-subtle-i)
-                    :background (face-foreground 'nano-subtle-i)
-                    :inherit nil
-                    :box nil)
-(set-face-attribute 'mode-line-inactive nil
-                    :foreground (face-foreground 'nano-subtle-i)
-                    :background (face-foreground 'nano-subtle-i)
-                    :inherit nil
-                    :box nil)
-
-(set-face-attribute 'nano-modeline-active nil
-                    :underline (face-foreground 'nano-default-i)
-                    :background (face-background 'nano-subtle)
-                    :inherit '(nano-default-)
-                    :box nil)
-(set-face-attribute 'nano-modeline-inactive nil
-                    :foreground 'unspecified
-                    :underline (face-foreground 'nano-default-i)
-                    :background (face-background 'nano-subtle)
-                    :box nil)
-
-(set-face-attribute 'nano-modeline-active-name nil
-                    :foreground "black"
-                    :inherit '(nano-modeline-active nano-strong))
-(set-face-attribute 'nano-modeline-active-primary nil
-                    :inherit '(nano-modeline-active))
-(set-face-attribute 'nano-modeline-active-secondary nil
-                    :inherit '(nano-faded nano-modeline-active))
-
-(set-face-attribute 'nano-modeline-active-status-RW nil
-                    :inherit '(nano-faded-i nano-strong nano-modeline-active))
-(set-face-attribute 'nano-modeline-active-status-** nil
-                    :inherit '(nano-popout-i nano-strong nano-modeline-active))
-(set-face-attribute 'nano-modeline-active-status-RO nil
-                    :inherit '(nano-default-i nano-strong nano-modeline-active))
-
-(set-face-attribute 'nano-modeline-inactive-name nil
-                    :inherit '(nano-faded nano-strong
-                               nano-modeline-inactive))
-(set-face-attribute 'nano-modeline-inactive-primary nil
-                    :inherit '(nano-faded nano-modeline-inactive))
-
-(set-face-attribute 'nano-modeline-inactive-secondary nil
-                    :inherit '(nano-faded nano-modeline-inactive))
-(set-face-attribute 'nano-modeline-inactive-status-RW nil
-                    :inherit '(nano-modeline-inactive-secondary))
-(set-face-attribute 'nano-modeline-inactive-status-** nil
-                    :inherit '(nano-modeline-inactive-secondary))
-(set-face-attribute 'nano-modeline-inactive-status-RO nil
-                    :inherit '(nano-modeline-inactive-secondary))
+(add-hook 'prog-mode-hook            #'nano-modeline-prog-mode)
+(add-hook 'text-mode-hook            #'nano-modeline-text-mode)
+(add-hook 'org-mode-hook             #'nano-modeline-org-mode)
+(add-hook 'pdf-view-mode-hook        #'nano-modeline-pdf-mode)
+(add-hook 'mu4e-headers-mode-hook    #'nano-modeline-mu4e-headers-mode)
+(add-hook 'mu4e-view-mode-hook       #'nano-modeline-mu4e-message-mode)
+(add-hook 'elfeed-show-mode-hook     #'nano-modeline-elfeed-entry-mode)
+(add-hook 'elfeed-search-mode-hook   #'nano-modeline-elfeed-search-mode)
+(add-hook 'term-mode-hook            #'nano-modeline-term-mode)
+(add-hook 'xwidget-webkit-mode-hook  #'nano-modeline-xwidget-mode)
+(add-hook 'messages-buffer-mode-hook #'nano-modeline-message-mode)
+(add-hook 'org-capture-mode-hook     #'nano-modeline-org-capture-mode)
+(add-hook 'org-agenda-mode-hook      #'nano-modeline-org-agenda-mode)
 #+end_src
-
-Custom Modeline Formats
-#+begin_src emacs-lisp
-(defun eg/nano-modeline-prog-mode-p ()
-   (derived-mode-p 'prog-mode))
-
-(defun eg/nano-modeline-text-mode-p ()
-  (derived-mode-p 'text-mode))
-
-(defun eg/nano-get-branch-name-string ()
-  (let ((branch-name (nano-modeline-vc-branch)))
-    (if branch-name
-        branch-name
-      " ")))
-
-;; We have to redefine current-line for
-;; emacs 29+
-(defun current-line ()
-(count-lines
-                (point-min) (line-beginning-position)))
- 
-(defun eg/nano-modeline-prog-mode ()
-  (let* ((icon (plist-get (cdr (assoc 'prog-mode nano-modeline-mode-formats)) :icon))
-         (buff-name (format-mode-line "%b"))
-         (branch-name (eg/nano-get-branch-name-string))
-         (mode-name (nano-modeline-mode-name))
-         (num-lines (car (page--count-lines-page)))
-         (prog-circle (propertize "  " 'display
-                                  (svg-lib-progress-pie
-                                   (/ (current-line) (* 1.0 num-lines))
-                                   nil
-                                   :width 1
-                                   :stroke 2
-                                   :padding 2
-                                   :margin 0)))
-         (position (format-mode-line "%l:%c")))
-    (nano-modeline-render icon
-                          buff-name
-                          branch-name
-                          (concat
-                           position
-                           "  "
-                           (if (member #'eglot--managed-mode minor-mode-list)
-                               (format-mode-line (eglot--mode-line-format))
-                             "")
-                           "  "
-                           ;;(format-mode-line flymake-mode-line-format)
-                           ;;"  "
-                           (format-mode-line prog-circle)
-                           "  "
-                           mode-name))))
-
-(add-to-list
- 'nano-modeline-mode-formats
- '(prog-mode
-   :mode-p eg/nano-modeline-prog-mode-p
-   :format eg/nano-modeline-prog-mode
-   :icon ""))
-(add-to-list
- 'nano-modeline-mode-formats
- '(yaml-mode
-   :mode-p eg/nano-modeline-text-mode-p
-   :format eg/nano-modeline-prog-mode
-   :icon ""))
-#+end_src
-
+** Thin bottom modeline
 Custom hook for styling the modeline as a thin line.
-Taken from ()
+Taken from (rougier's config)
 #+begin_src emacs-lisp
   (defun my/thin-modeline ()
     "Transform the modeline in a thin faded line"
-  
-    (nano-modeline-face-clear 'mode-line)
-    (nano-modeline-face-clear 'mode-line-inactive)
     (setq mode-line-format (list ""))
     (setq-default mode-line-format (list ""))
     (set-face-attribute 'mode-line nil
@@ -541,8 +416,23 @@ Taken from ()
                         :background (face-background 'nano-subtle)
                         :height 0.1))
 
-  (add-hook 'nano-modeline-mode-hook #'my/thin-modeline)
-(nano-modeline-mode 1)
+  (add-hook 'prog-mode-hook #'my/thin-modeline)
+  (add-hook 'fundamental-mode-hook #'my/thin-modeline)
+  (add-hook 'text-mode-hook #'my/thin-modeline)
+  (add-hook 'special-mode-hook #'my/thin-modeline)
+  (add-hook 'prog-mode-hook            #'my/thin-modeline)
+  (add-hook 'text-mode-hook            #'my/thin-modeline)
+  (add-hook 'org-mode-hook             #'my/thin-modeline)
+  (add-hook 'pdf-view-mode-hook        #'my/thin-modeline)
+  (add-hook 'mu4e-headers-mode-hook    #'my/thin-modeline)
+  (add-hook 'mu4e-view-mode-hook       #'my/thin-modeline)
+  (add-hook 'elfeed-show-mode-hook     #'my/thin-modeline)
+  (add-hook 'elfeed-search-mode-hook   #'my/thin-modeline)
+  (add-hook 'term-mode-hook            #'my/thin-modeline)
+  (add-hook 'xwidget-webkit-mode-hook  #'my/thin-modeline)
+  (add-hook 'messages-buffer-mode-hook #'my/thin-modeline)
+  (add-hook 'org-capture-mode-hook     #'my/thin-modeline)
+  (add-hook 'org-agenda-mode-hook      #'my/thin-modeline)
 #+end_src
 ** Minibuffer Settings
 Taken from (https://github.com/rougier/dotemacs/blob/master/dotemacs.org)
@@ -591,6 +481,11 @@ Setup minibuffer with the custom header line
 
 (add-hook 'minibuffer-setup-hook #'my/minibuffer-setup)
 #+end_src
+** Posframe
+#+begin_src emacs-lisp
+(use-package posframe
+  :straight '(posframe :type git :host github :repo "tumashu/posframe"))
+#+end_src
 ** Completion Settings
 *** Savehist
 #+begin_src emacs-lisp
@@ -600,8 +495,41 @@ Setup minibuffer with the custom header line
 *** Vertico
 #+begin_src emacs-lisp
   (use-package vertico
+    :straight (vertico :files (:defaults "extensions/*")
+                     :includes (vertico-indexed
+                                vertico-flat
+                                vertico-grid
+                                vertico-mouse
+                                vertico-quick
+                                vertico-buffer
+                                vertico-repeat
+                                vertico-reverse
+                                vertico-directory
+                                vertico-multiform
+                                vertico-unobtrusive
+                                ))
     :custom (vertico-cycle t)
     :config (vertico-mode))
+#+end_src
+
+**** Vertico with posframe
+The following will set up a centered frame for the minibuffer when using vertico/consult based commands
+#+begin_src emacs-lisp
+(use-package vertico-posframe
+  :straight '(vertico-posframe :type git :host github :repo "tumashu/vertico-posframe"))
+
+(setq vertico-multiform-commands
+      '((consult-line
+         posframe
+         (vertico-posframe-poshandler . posframe-poshandler-frame-top-center)
+         (vertico-posframe-border-width . 10)
+         ;; NOTE: This is useful when emacs is used in both in X and
+         ;; terminal, for posframe do not work well in terminal, so
+         ;; vertico-buffer-mode will be used as fallback at the
+         ;; moment.
+         (vertico-posframe-fallback-mode . vertico-buffer-mode))
+        (t posframe)))
+(vertico-multiform-mode 1)
 #+end_src
 *** Corfu
 #+begin_src emacs-lisp
@@ -970,14 +898,7 @@ Install rjsx mode for dealing with JSX specifically. Note that in the custom hoo
 (add-to-list 'auto-mode-alist '("\\.jsx?$" . rjsx-mode))
 #+end_src
 
-Use Prettier for better JS formatting
-#+begin_src emacs-lisp
-(use-package prettier-js
-  :hook ((js2-mode . prettier-js-mode)
-         ;(web-mode . prettier-js-mode)
-         (typescript-mode . prettier-js-mode)
-         (prettier-js-mode . add-node-modules-path)))
-#+end_src
+TODO use prettier mode somehow, probably from [[https://github.com/jscheid/prettier.el][here]]
 
 Try to use local eslint config files, if found
 #+begin_src emacs-lisp
@@ -1116,14 +1037,6 @@ Tell LSP mode where to find your tsconfig file(s), when used. Taken from (https:
 (set-face-attribute 'show-paren-match nil :weight 'extra-bold :underline t)
 #+end_src
 
-** DAP Settings
-Debug Adapter Protocol Settings
-#+begin_src emacs-lisp
-(use-package dap-mode
-  :config
-  (require 'dap-node)
-  (dap-node-setup))
-#+end_src
 ** General Formatting Settings
 *** Olivetti
 #+begin_src emacs-lisp
@@ -1404,6 +1317,14 @@ We provide some nice initial Babel settings, such as appropriate fonts for code 
 ** RESTClient Mode
 #+begin_src emacs-lisp
 (use-package restclient)
+
+;; Add an interactive to make a rest buffer
+(defun rest-client ()
+  (interactive)
+  (let ((buff (get-buffer-create "*REST CLIENT*")))
+    (with-current-buffer buff
+      (switch-to-buffer buff)
+      (restclient-mode))))
 #+end_src
 ** Grep and related
 *** Use [[https://github.com/mhayashi1120/Emacs-wgrep][wgrep]] for editable grep results
@@ -1582,4 +1503,9 @@ If we are on the M1 Laptop, use the quattro font
   (progn
     (set-face-attribute 'default nil :family "iA Writer Quattro V" :height 170 :weight 'light)
     (message "Set M1 font family!")))
+#+end_src
+*** Set the background color
+But set the background color to use [[https://stephango.com/flexoki][Flexoki]] light background
+#+begin_src emacs-lisp
+(set-background-color "#FFFCF0")
 #+end_src
