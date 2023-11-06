@@ -1268,7 +1268,17 @@ We provide some nice initial Babel settings, such as appropriate fonts for code 
         (branch            "\xe0a0")
         (detached          "\x27a6")
         (cross             "\x2718")
-        dir git git-face)
+        prefix dir git git-face)
+    (setq prefix
+      (if (eshell-get-variable "NODE_VIRTUAL_ENV")
+        (propertize (concat ""
+          (propertize " " 'display
+            (svg-lib-icon "forest" nil :collection "material"
+              :margin 0 :radius: 0 :stroke 0 :padding 0
+              :foreground (face-background 'nano-popout-i)
+              :background (face-background 'nano-salient-i)))
+            ) 'face 'nano-salient-i)
+        ""))
     (setq dir
           (propertize
            (concat
@@ -1473,7 +1483,19 @@ We need to whitelist certain unsafe variables as safe, when setting using a dir-
 ** Nodeenv Sourcing
 This function lets us source a nodeenv inside of eshell
 #+begin_src emacs-lisp
-(defun source-nodeenv (path)
+(defun eg/set-node-env-variables (variables-alist)
+  (let ((node-variable-names '("NODE_VIRTUAL_ENV" "_OLD_NODE_VIRTUAL_PATH" "_OLD_NODE_PATH" "NODE_PATH" "_OLD_NPM_CONFIG_PREFIX" "NPM_CONFIG_PREFIX")))
+    (mapc
+     (lambda (variable-name)
+       (let ((found-variable (assoc-default variable-name variables-alist)))
+         (if found-variable
+             (progn
+               (eshell-set-variable variable-name found-variable)))))
+     node-variable-names))
+  (eshell-set-variable "PATH" (assoc-default "PATH" variables-alist)))
+  
+(defun nodeenv-set-environment (path)
+  (setq eshell-modify-global-environment t)
   (let* ((cmd (format "zsh -c \"source %s/bin/activate && printenv\"" path))
         (cmd-output (shell-command-to-string cmd))
         (lines (s-split "\n" cmd-output))
@@ -1483,11 +1505,11 @@ This function lets us source a nodeenv inside of eshell
                               (cons (car split) (cadr split))))
                           lines))
         (current-env (mapcar #'copy-sequence process-environment)))
-    (mapc
-     (lambda (pair)
-       (setenv (car pair) (cdr pair)))
-     variables-alist)
-    (setq eg/nodeenv--stashed-current-env current-env)))
+    (eg/set-node-env-variables variables-alist)
+    (setq eg/nodeenv--stashed-current-env current-env))
+  (setq eshell-modify-global-environment nil))
+
+(defalias 'eshell/nse 'nodeenv-set-environment)
 #+end_src
 ** Load Further Custom Functions
 We provide a host of over custom functions in a separate file
