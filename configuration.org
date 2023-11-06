@@ -898,7 +898,10 @@ Install rjsx mode for dealing with JSX specifically. Note that in the custom hoo
 (add-to-list 'auto-mode-alist '("\\.jsx?$" . rjsx-mode))
 #+end_src
 
-TODO use prettier mode somehow, probably from [[https://github.com/jscheid/prettier.el][here]]
+Use prettier mode somehow, probably from [[https://github.com/jscheid/prettier.el][here]]
+#+begin_src emacs-lisp
+(use-package prettier)
+#+end_src
 
 Try to use local eslint config files, if found
 #+begin_src emacs-lisp
