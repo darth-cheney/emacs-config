@@ -348,8 +348,13 @@ Load the DOOM Themes, which are nice defaults. Note that we have _disabled_ the 
 #+begin_src emacs-lisp
     (use-package nano-theme
       :ensure nil
-      :straight '(nano-theme :type git :host github :repo "rougier/nano-theme"))
-  (setq nano-fonts-use t)
+      :straight '(nano-theme :type git :host github :repo "rougier/nano-theme")
+      :custom (nano-fonts-use t)
+      :config(nano-mode)
+      (load-theme 'nano-light t)
+      (setq-default cursor-type 'box)
+      (set-background-color "#FFFCF0"))
+  
 #+end_src
 
 Ensure that when we switch themes, we reset the cursor to be a block type
@@ -1305,14 +1310,14 @@ We provide some nice initial Babel settings, such as appropriate fonts for code 
     (eshell-git-prompt---str-read-only
      (concat
       (if git
-          (concat dir
+          (concat prefix dir
                   (with-face segment-separator
                     :foreground (face-background 'nano-salient-i)
                     :background (face-background git-face))
                   git
                   (with-face segment-separator
                     :foreground (face-background 'nano-popout-i)))
-        (concat dir
+        (concat prefix dir
                 (with-face segment-separator
                   :foreground (face-background 'nano-salient))))
       (propertize "$" 'invisible t) " "))))
