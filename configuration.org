@@ -543,6 +543,19 @@ The following will set up a centered frame for the minibuffer when using vertico
   :custom ((corfu-cycle t) (corfu-auto t))
   :config (global-corfu-mode))
 #+end_src
+**** Use [[https://github.com/jdtsmith/kind-icon][kind-icons]] for completion icons
+#+begin_src emacs-lisp
+(use-package kind-icon
+  :ensure t
+  :after corfu
+  :custom
+  (kind-icon-default-face 'corfu-default) ; to compute blended backgrounds correctly
+  (kind-icon-use-icons t)
+  :config
+  (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter))
+#+end_src
+
+#+begin
 *** Orderless
 #+begin_src emacs-lisp
 (use-package orderless
@@ -926,7 +939,17 @@ We need popwin to popup special Eglot modes
 #+begin_src emacs-lisp
 (use-package json-mode)
 #+end_src
-
+**** Extra settings to integration with jq
+#+begin_src emacs-lisp
+(defun jq-this-file (jq-query)
+  (interactive "sJQ Query: ")
+  (save-excursion
+    (mark-whole-buffer)
+    (let ((cmd (concat "jq '" jq-query "'"))
+          (output-buf (get-buffer-create "*jq*")))
+      (shell-command-on-region (mark) (point) cmd output-buf)
+      (switch-to-buffer-other-window output-buf))))
+#+end_src
 *** HTML/Web Settings
 We use web-mode for editing HTML
 #+begin_src emacs-lisp
@@ -1045,6 +1068,22 @@ Tell LSP mode where to find your tsconfig file(s), when used. Taken from (https:
 (set-face-attribute 'show-paren-match nil :weight 'extra-bold :underline t)
 #+end_src
 
+*** PHP and Drupal
+#+begin_src emacs-lisp
+(use-package drupal-mode)
+#+end_src
+
+Add hooks to for setting indentation etc
+#+begin_src emacs-lisp
+(defun eg/php-mode-hook ()
+  (setq indent-tabs-mode nil tab-width 2 c-basic-offset 2))
+(add-hook 'php-mode-hook 'eg/php-mode-hook)
+#+end_src
+
+**** Use [[https://github.com/ahungry/geben#installation][Geben]] for xdebug interaction
+#+begin_src emacs-lisp
+(use-package geben)
+#+end_src
 ** General Formatting Settings
 *** Olivetti
 #+begin_src emacs-lisp
@@ -1076,6 +1115,10 @@ Elpher is a mode for dealing with Gemini and Gopher browsing
 #+end_src
 
 ** Org Settings
+*** Set up agenda files from the Syncthing directory:
+#+begin_src emacs-lisp
+(setq org-agenda-files '("~/Sync/"))
+#+end_src
 *** Old Settings (_INACTIVE_) :INACTIVE:
 The following are the `org-mode` settings I was previously using in my main config. It is currently _INACTIVE_, as I'm experimenting with more of a NANO based theme.
 
@@ -1138,7 +1181,6 @@ The following are the `org-mode` settings I was previously using in my main conf
 
 ;; (setq org-agenda-restore-windows-after-quit t)
 ;; (setq org-agenda-skip-unavailable-files t)
-;; (setq org-agenda-files '("~/Sync/primary-agenda.org"))
 #+end_src
 
 *** Interim Config (_INACTIVE_) :INACTIVE:
@@ -1485,6 +1527,13 @@ We need to whitelist certain unsafe variables as safe, when setting using a dir-
   :straight '(idp :type git :host github :repo "18F/idp-emacs"))
 #+end_src
 
+** Docker
+Use [[https://github.com/Silex/docker.el][docker.el]] for interacting with docker containers
+#+begin_src emacs-lisp
+(use-package docker
+  :ensure t
+  :bind ("C-c d" . docker))
+#+end_src
 ** Nodeenv Sourcing
 This function lets us source a nodeenv inside of eshell
 #+begin_src emacs-lisp
@@ -1515,6 +1564,27 @@ This function lets us source a nodeenv inside of eshell
   (setq eshell-modify-global-environment nil))
 
 (defalias 'eshell/nse 'nodeenv-set-environment)
+#+end_src
+** Weathergov Setup
+
+#+begin_src emacs-lisp
+(defun eg/run-initial-weather-gov-setup ()
+  (let* ((commands '(
+       "git clone git@github-tts:weather-gov/weather.gov"
+       "cd weather.gov"
+       "nodeenv --prebuilt --node=lts .nodeenv"
+       "npm install"
+       "cp weather.gov/web/sites/example.settings.dev.php web/sites/settings.dev.php"))
+       (command-string (string-join commands " && ")))
+    (shell-command command-string)
+    (eshell-command "cd weather.gov && nse .nodeenv"))
+)
+(defalias 'eshell/wg 'eg/run-initial-weather-gov-setup t)
+#+end_src
+** Gettext / PO
+#+begin_src emacs-lisp
+(use-package po-mode
+:straight '(po-mode :type git :host github :repo "emacsmirror/po-mode"))
 #+end_src
 ** Load Further Custom Functions
 We provide a host of over custom functions in a separate file
