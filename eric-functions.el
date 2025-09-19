@@ -138,3 +138,58 @@ Will update the modeline as needed"
   (eval `(,(intern (concat "nano-" (symbol-name eg/nano-current-theme)))))
   (nano-modeline-mode 1)
   eg/nano-current-theme)
+
+
+;; Helper functions for working on weather.gov
+(defun eg/goto-or-create-todays-dir (name-prefix)
+  "Go to the directory named with the prefix and today's date.
+If the directory does not yet exist, create it."
+  (let* ((suffix (format-time-string "%-m-%-d-%y"))
+         (dir-name (concat name-prefix "-" suffix))
+         (dir-path
+          (if (and (boundp eg/projects-directory) eg/projects-directory)
+              (concat eg/projects-directory "/" dir-name)
+            (concat "~/Projects/" dir-name))
+          ))
+    ;; If the directory does not exist, make it
+    (unless (file-directory-p dir-path)
+      (make-directory dir-path))
+    ;; Change into the directory
+    (cd dir-path)
+    dir-path))
+
+(defun eg/clone-weather-dot-gov (base-path)
+  (let ((dir-path (concat base-path "/weather.gov")))
+    (unless (file-directory-p dir-path)
+      (progn
+        (message base-path)
+        (cd base-path)
+        (shell-command "git clone git@github-tts:weather-gov/weather.gov")))
+    
+    (cd dir-path)
+    (shell-command-to-string "weathergov-git")))
+
+(defun eg/weather-gov-startup-eshell (dir-path)
+  (eshell)
+  (with-current-buffer "*eshell*"
+    (eshell-return-to-prompt)
+    (insert (concat "cd " dir-path))
+    (eshell-send-input)
+    (eshell-return-to-prompt)
+    (insert "nse .nodeenv && npm i")
+    (eshell-send-input)
+    (eshell-return-to-prompt)))
+
+(defun eg/weather-gov-create-nodeenv (dir-path)
+  "Create a node environment if it does not already exist"
+  (unless (file-directory-p (concat dir-path "/.nodeenv"))
+    (shell-command-to-string
+     (concat "nodeenv --prebuilt --node=lts " dir-path "/.nodeenv"))))
+
+(defun eg/init-weather-gov-today ()
+  (interactive)
+  (let* ((base-dir (eg/goto-or-create-todays-dir "weather-gov"))
+         (repo-dir (concat base-dir "/weather.gov")))
+    (eg/clone-weather-dot-gov base-dir)
+    (eg/weather-gov-create-nodeenv repo-dir)
+    (eg/weather-gov-startup-eshell repo-dir)))

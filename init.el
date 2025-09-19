@@ -219,9 +219,9 @@
 (use-package xref
     :straight t)
 
-  (use-package project
-    :straight t)
-
+  ;; (use-package project
+  ;;   :straight t)
+(straight-use-package '(project :type built-in))
   (use-package eldoc
     :straight t)
 
@@ -738,6 +738,17 @@ cursor into the new window"
 
 (use-package geben)
 
+(add-hook 'go-mode-hook 'eglot-ensure)
+(add-to-list 'auto-mode-alist '("\\.\\(go\\)\\'" . go-ts-mode))
+
+;; (setq pyenv-installation-dir "/opt/homebrew/bin/pyenv")
+;; (use-package pyenv
+;;   :straight (:host github :repo "aiguofer/pyenv.el")
+;;   :config
+;;   (global-pyenv-mode))
+
+(add-to-list 'auto-mode-alist '("\\.\\(py\\)\\'" . python-ts-mode))
+
 (use-package olivetti)
 
 (use-package company
@@ -1053,4 +1064,9 @@ rcirc authinfo list for Freenode"
     (set-face-attribute 'default nil :family "iA Writer Quattro V" :height 170 :weight 'light)
     (message "Set M1 font family!")))
 
+(defvar eg/background-color "#FFFCF0")
 (set-background-color "#FFFCF0")
+
+(defun init-background-color (interactive)
+(set-background-color eg/background-color)
+)

@@ -323,9 +323,9 @@ Make sure that plain modes are at the latest versions, using straight.
 (use-package xref
     :straight t)
 
-  (use-package project
-    :straight t)
-
+  ;; (use-package project
+  ;;   :straight t)
+(straight-use-package '(project :type built-in))
   (use-package eldoc
     :straight t)
 
@@ -600,29 +600,6 @@ We use Counsel in combination with Ivy in order to have a rich completion interf
 	     :config
 	     (setq which-key-idle-delay 1))
 #+end_src
-** Ivy Configuration :INACTIVE:
-Use Ivy as the completion frontend
-#+begin_src emacs-lisp
-(use-package ivy
-	     :diminish
-	     :bind (("C-s" . swiper)
-		    :map ivy-minibuffer-map
-		    ("TAB" . ivy-alt-done)
-		    ("C-k" . ivy-next-line)
-		    ("C-j" . ivy-previous-line))
-	     :config
-	     (ivy-mode 1))
-
-(use-package ivy-rich
-	     :init
-	     (ivy-rich-mode 1))
-#+end_src
-
-Smex shows the most recently-used commands at the top of the minibuffer when executing interactively.
-#+begin_src emacs-lisp
-(use-package smex)
-#+end_src
-
 ** Icons and other Graphical Flourishes
 All the Icons provides a great set of icons for the UI. Note that you will need to run `M-x all-the-icons-install-fonts` interactively when you first load a fresh configuration.
 #+begin_src emacs-lisp
@@ -1083,6 +1060,25 @@ Add hooks to for setting indentation etc
 **** Use [[https://github.com/ahungry/geben#installation][Geben]] for xdebug interaction
 #+begin_src emacs-lisp
 (use-package geben)
+#+end_src
+*** Go
+#+begin_src emacs-lisp
+(add-hook 'go-mode-hook 'eglot-ensure)
+(add-to-list 'auto-mode-alist '("\\.\\(go\\)\\'" . go-ts-mode))
+#+end_src
+*** Python
+Install pyenv
+#+begin_src emacs-lisp
+  ;; (setq pyenv-installation-dir "/opt/homebrew/bin/pyenv")
+  ;; (use-package pyenv
+  ;;   :straight (:host github :repo "aiguofer/pyenv.el")
+  ;;   :config
+  ;;   (global-pyenv-mode))
+#+END_src
+
+Set auto mode for python files
+#+begin_src emacs-lisp
+(add-to-list 'auto-mode-alist '("\\.\\(py\\)\\'" . python-ts-mode))
 #+end_src
 ** General Formatting Settings
 *** Olivetti
@@ -1581,11 +1577,6 @@ This function lets us source a nodeenv inside of eshell
 )
 (defalias 'eshell/wg 'eg/run-initial-weather-gov-setup t)
 #+end_src
-** Gettext / PO
-#+begin_src emacs-lisp
-(use-package po-mode
-:straight '(po-mode :type git :host github :repo "emacsmirror/po-mode"))
-#+end_src
 ** Load Further Custom Functions
 We provide a host of over custom functions in a separate file
 #+begin_src emacs-lisp
@@ -1626,5 +1617,11 @@ If we are on the M1 Laptop, use the quattro font
 *** Set the background color
 But set the background color to use [[https://stephango.com/flexoki][Flexoki]] light background
 #+begin_src emacs-lisp
+(defvar eg/background-color "#FFFCF0")
 (set-background-color "#FFFCF0")
+
+(defun init-background-color ()
+(interactive)
+(set-background-color eg/background-color)
+)
 #+end_src
