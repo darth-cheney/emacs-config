@@ -13,14 +13,17 @@
   (load bootstrap-file nil 'nomessage))
 
 (straight-use-package 'use-package)
-;; Configure use-package to use straight.el by default
+  ;; Configure use-package to use straight.el by default
 (use-package straight
-             :custom (straight-use-package-by-default t))
+  :custom
+  (straight-built-in-pseudo-packages '(emacs flymake eglot))
+  (straight-use-package-by-default t))
 
 (setq custom-file (concat user-emacs-directory "custom.el"))
 (load-file custom-file)
 
 (defconst *is-a-mac* (eq system-type 'darwin))
+(defconst *is-linux* (eq system-type 'gnu/linux))
 
 (defconst *is-m1-laptop* (equal system-name "macbook-m1.lan"))
 (if *is-m1-laptop* (message "System appears to be an M1 Macbook"))
@@ -103,18 +106,6 @@
  truncate-lines nil
  truncate-partial-width-windows nil)
 
-(use-package lin
-    :straight '(lin-mode :type git :host github :repo "protesilaos/lin")
-    :bind
-    ("C-c l" . lin-mode))
-
-;;(set-face-attribute 'default nil :font "DinaRemasterII" :weight 'regular :height 170)
-
-(defun eg/set-default-font-height ()
-  (interactive)
-  (let ((num (read-number "Enter new font height:  ")))
-    (set-face-attribute 'default nil :height num)))
-
 (defun sanityinc/adjust-opacity (frame incr)
   "Adjust the background opacity of FRAME by increment INCR."
   (unless (display-graphic-p frame)
@@ -132,7 +123,6 @@
 (global-set-key (kbd "M-C-7") (lambda () (interactive) (modify-frame-parameters nil `((alpha . 100)))))
 
 (use-package unicode-fonts
-   :ensure t
    :config
    (unicode-fonts-setup))
 
@@ -191,7 +181,6 @@
   (vterm-mode . eg/vterm-mode-hook))
 
 (use-package dwim-shell-command
-  :ensure t
   :bind (([remap shell-command] . dwim-shell-command)
          :map dired-mode-map
          ([remap dired-do-async-shell-command] . dwim-shell-command)
@@ -228,30 +217,25 @@
 (use-package svg-lib
              :straight '(svg-lib :type git :host github :repo "rougier/svg-lib"))
 
-(use-package doom-themes
-        ;;:init (load-theme 'doom-challenger-deep t)
-         )
-
 (use-package nano-theme
-  :ensure nil
+  ;;:ensure nil
   :straight '(nano-theme :type git :host github :repo "rougier/nano-theme")
   :custom (nano-fonts-use t)
-  :config(nano-mode)
+  :config
+  (message "Starting nano mode")
+  (nano-mode)
+  (message "Loading nano theme")
   (load-theme 'nano-light t)
-  (setq-default cursor-type 'box)
-  (set-background-color "#FFFCF0"))
+  (setq-default cursor-type 'box))
 
 (defun eg/after-theme-load (_theme &rest args)
   (message "eg/after-theme-load!")
   (setq-default cursor-type 'box)
 (advice-add 'load-theme :after 'eg/after-theme-load))
 
-(nano-mode)
-(load-theme 'nano-light t)
-(setq-default cursor-type 'box)
-
-(use-package flexoki-themes
-  :straight '(flexoki-themes :type git :host github :repo "crmsnbleyd/flexoki-emacs-theme"))
+;; (nano-mode)
+;; (load-theme 'nano-light t)
+;; (setq-default cursor-type 'box)
 
 (use-package nano-modeline
   :straight '(nano-modeline :type git :host github :repo "rougier/nano-modeline")
@@ -387,12 +371,10 @@
 (vertico-multiform-mode 1)
 
 (use-package corfu
-  :ensure t
   :custom ((corfu-cycle t) (corfu-auto t))
   :config (global-corfu-mode))
 
 (use-package kind-icon
-  :ensure t
   :after corfu
   :custom
   (kind-icon-default-face 'corfu-default) ; to compute blended backgrounds correctly
@@ -417,8 +399,6 @@
 
 (use-package all-the-icons)
 
-;; (use-package hydra)
-
 (use-package helpful
 	     :custom
 	     (counsel-describe-function-function #'helpful-callable)
@@ -430,7 +410,6 @@
 	     ([remap describe-key] . helpful-key))
 
 (use-package dashboard
-  :ensure t
   :config (dashboard-setup-startup-hook)
   :custom ((dashboard-banner-logo-title "")
 	   (dashboard-startup-banner "~/.emacs.d/lamassu.png")
@@ -498,6 +477,7 @@ cursor into the new window"
   :custom ((magit-diff-refine-hunk t)))
 
 (use-package git-commit
+  :straight nil
   :hook ((git-commit-mode . goto-address-mode)))
 
 (add-hook 'prog-mode-hook 'electric-pair-mode)
@@ -509,7 +489,8 @@ cursor into the new window"
 (defun eg/ruby-mode-hook ()
   (setq ruby-indent-level 2
         ruby-indent-tabs-mode nil)
-  (company-mode))
+  ;;(company-mode)
+  )
   
 (use-package enh-ruby-mode
   :hook
@@ -540,7 +521,6 @@ cursor into the new window"
              '("\\(?:Brewfile\\|Capfile\\|Gemfile\\(?:\\.[a-zA-Z0-9._-]+\\)?\\|[rR]akefile\\)\\'" . enh-ruby-mode))
 
 (use-package rubocop
-   :ensure t
    :init
    :hook
    (enh-ruby-mode . rubocop-mode)
@@ -558,38 +538,6 @@ cursor into the new window"
   )
 (advice-add 'inf-ruby-console-auto :before #'rvm-activate-corresponding-ruby)
 
-(use-package nvm
-:straight '(nvm :type git :host github :repo "rejeep/nvm.el"))
-
-;; Add NodeJS error format
-;; (setq compilation-error-regexp-alist-alist
-;;       (cons '(node "^[  ]+at \\(?:[^\(\n]+ \(\\)?\\([a-zA-Z\.0-9_/-]+\\):\\([0-9]+\\):\\([0-9]+\\)\)?$"
-;;                          1 ;; file
-;;                          2 ;; line
-;;                          3 ;; column
-;;                          )
-;;             compilation-error-regexp-alist-alist))
-;; (setq compilation-error-regexp-alist-alist
-;;       (cons '(npm "^[  ]+at \\(?:[^\(\n]+ \(\\)?\\([a-zA-Z\.0-9_/-]+\\):\\([0-9]+\\):\\([0-9]+\\)\)?$"
-;;                          1 ;; file
-;;                          2 ;; line
-;;                          3 ;; column
-;;                          )
-;;             compilation-error-regexp-alist-alist))
-;; (setq compilation-error-regexp-alist-alist
-;;       (cons '(npx "^[  ]+at \\(?:[^\(\n]+ \(\\)?\\([a-zA-Z\.0-9_/-]+\\):\\([0-9]+\\):\\([0-9]+\\)\)?$"
-;;                          1 ;; file
-;;                          2 ;; line
-;;                          3 ;; column
-;;                          )
-;;             compilation-error-regexp-alist-alist))
-;; (setq compilation-error-regexp-alist
-;;       (cons 'node compilation-error-regexp-alist))
-;; (setq compilation-error-regexp-alist
-;;       (cons 'npx compilation-error-regexp-alist))
-;; (setq compilation-error-regexp-alist
-;;       (cons 'npm compilation-error-regexp-alist))
-
 (defun eg/js2-mode-hook ()
     (progn
       (setq mode-name "JS2")
@@ -601,13 +549,12 @@ cursor into the new window"
 (add-to-list 'auto-mode-alist '("\\.\\(js\\|es6\\)\\(\\.erb\\)?\\'" . js2-mode))
 
 (defun eg/typescript-mode-hook ()
-  (company-mode)
+  ;;(company-mode)
   (eglot-ensure)
   (add-node-modules-path))
 ;; Taken from (https://vxlabs.com/2022/06/12/typescript-development-with-emacs-tree-sitter-and-lsp-in-2022/)
 (use-package typescript-mode
   :after tree-sitter
-  :ensure t
   :hook
   (typescript-mode . eg/typescript-mode-hook))
 (define-derived-mode typescriptreact-mode typescript-mode "TSX")
@@ -617,7 +564,7 @@ cursor into the new window"
 (defun eg/rjsx-mode-hook ()
         ;;(js2-minor-mode)
         (add-node-modules-path)
-        (company-mode)
+        ;;(company-mode)
         (eglot-ensure)
         )
 (use-package rjsx-mode
@@ -631,10 +578,6 @@ cursor into the new window"
   :hook ((js2-mode . eslint-rc-mode)
          (typescript-mode . eslint-rc-mode)
          (rjsx-mode . eslint-rc-mode)))
-
-(use-package popwin
-  :config (lambda ()
-            (push "*xref*" popwin:special-display-config)))
 
 (use-package json-mode)
 
@@ -652,13 +595,12 @@ cursor into the new window"
 (add-to-list 'auto-mode-alist '("\\.html?\\'" . web-mode))
 (add-to-list 'auto-mode-alist '("\\.erb?\\'" . web-mode))
 
-(use-package sass-mode)
-(add-to-list 'auto-mode-alist '("\\.scss?\\'" . sass-mode))
+(use-package scss-mode)
+(add-to-list 'auto-mode-alist '("\\.scss?\\'" . scss-mode))
 
 (use-package markdown-mode)
 
 (use-package grip-mode
-  :ensure t
   :bind (:map markdown-mode-command-map
          ("g" . grip-mode)))
 
@@ -670,22 +612,9 @@ cursor into the new window"
 (use-package geiser)
 (use-package geiser-guile)
 
-;; (defun eg/lsp-mode-setup ()
-  ;;   (setq lsp-headerline-breadcrumb-segments '(path-up-to-project file symbols))
-  ;;   (lsp-headerline-breadcrumb-mode)
-  ;;   (lsp-deferred))
-  ;; (use-package lsp-mode
-  ;;   :commands (lsp lsp-deferred)
-  ;;   :hook ((js2-mode . eg/lsp-mode-setup))
-  ;;   :init
-  ;;   (setq lsp-keymap-prefix "C-c l")
-  ;;   :config
-  ;;   (lsp-enable-which-key-integration t))
-;; LSP ivy integration allows things like jumping
-;; to definitions in a file from a list
-;;(use-package lsp-ivy)
-
 (use-package eglot
+  :custom
+  (eglot-code-action-indications '(eldoc-hint))
   :config
   ;; We define a custom eglot hover function to deal with
   ;; Solargraph's returning of null when hovering over an
@@ -717,20 +646,10 @@ cursor into the new window"
   '(enh-ruby-mode "solargraph" "socket" "--port" :autoport))
   )
 
-;; (defun eg/project-try-ts-config-json (dir)
-;;   (when-let* ((found (locate-dominating-file-dir "tsconfig.json")))
-;;     (cons 'eglot-project found)))
-;; (add-hook 'project-find-functions 'eg/project-try-ts-config-json nil nil)
-;; (add-to-list 'eglot-server-programs
-;;              '((typescript-mode) "typescript-language-server" "--stdio"))
-
-(use-package vue-mode)
-
-(add-to-list 'auto-mode-alist '("\\.vue\\'" . vue-mode))
+(use-package dape
+  :custom (dape-cwd-function 'projectile-project-root))
 
 (set-face-attribute 'show-paren-match nil :weight 'extra-bold :underline t)
-
-(use-package drupal-mode)
 
 (defun eg/php-mode-hook ()
   (setq indent-tabs-mode nil tab-width 2 c-basic-offset 2))
@@ -741,29 +660,12 @@ cursor into the new window"
 (add-hook 'go-mode-hook 'eglot-ensure)
 (add-to-list 'auto-mode-alist '("\\.\\(go\\)\\'" . go-ts-mode))
 
-;; (setq pyenv-installation-dir "/opt/homebrew/bin/pyenv")
-;; (use-package pyenv
-;;   :straight (:host github :repo "aiguofer/pyenv.el")
-;;   :config
-;;   (global-pyenv-mode))
+(add-hook 'python-ts-mode #'eglot-ensure)
 
 (add-to-list 'auto-mode-alist '("\\.\\(py\\)\\'" . python-ts-mode))
+(add-to-list 'auto-mode-alist '("\\.py\\'" . python-ts-mode))
 
 (use-package olivetti)
-
-(use-package company
-  :bind (:map company-active-map
-              ("<tab>" . company-complete-selection))
-  :custom
-  (company-minimum-prefix-length 1)
-  (company-idle-delay 0.0))
-
-(use-package company-box
-  :hook (company-mode . company-box-mode))
-
-(use-package elpher
-  :custom-face
-  (fixed-width ((t :family "Fira Sans"))))
 
 (setq org-agenda-files '("~/Sync/"))
 
@@ -830,8 +732,7 @@ cursor into the new window"
 ;;            'org-document-info-keyword))))
 ;; (message "Using macbook-m1.lan org font settings")
 
-(use-package eshell-git-prompt
-  :ensure t)
+(use-package eshell-git-prompt)
 
 ;; Custom eshell-git-prompt theme
 (defun eshell-git-prompt-nano-powerline ()
@@ -892,6 +793,8 @@ cursor into the new window"
 
 (defun eg/eshell-mode-hook ()
   (eshell-git-prompt-use-theme 'nano-powerline))
+
+(eshell-git-prompt-use-theme 'nano-powerline)
          
 (add-hook 'eshell-mode-hook 'eg/eshell-mode-hook)
 
@@ -909,7 +812,6 @@ cursor into the new window"
   :straight '(wgrep :type git :host github :repo "mhayashi1120/Emacs-wgrep"))
 
 (use-package projectile
-  :ensure t
   :diminish projectile-mode
   :config (projectile-mode +1)
   :bind-keymap
@@ -954,7 +856,6 @@ cursor into the new window"
 (add-hook 'compilation-mode-hook #'eg/compilation-mode-q)
 
 (use-package flymake
-:straight nil
 :custom
 (flymake-fringe-indicator-position nil)
 :hook
@@ -997,7 +898,6 @@ cursor into the new window"
   :straight '(idp :type git :host github :repo "18F/idp-emacs"))
 
 (use-package docker
-  :ensure t
   :bind ("C-c d" . docker))
 
 (defun eg/set-node-env-variables (variables-alist)
@@ -1041,6 +941,79 @@ cursor into the new window"
 )
 (defalias 'eshell/wg 'eg/run-initial-weather-gov-setup t)
 
+(add-to-list 'dape-configs
+'(debugpy-django-docker
+   modes (python-ts-mode)
+   host "localhost"
+   port 34235
+   :request "attach"
+   :mode "debug"
+   :showLog "true"
+))
+
+;; Custom function for debugging that will use
+;; projectile to determine the local root dir
+(defun nws/debug ()
+  (interactive)
+  (let ((dape-config `(
+          modes (python-ts-mode)
+          host "localhost"
+          port 34235
+          :request "attach"
+          :mode "debug"
+          :showLog "true"
+          :pathMappings [(:localRoot ,(concat (projectile-project-root) "forecast") :remoteRoot "/code")])))
+
+    (dape dape-config)
+))
+
+;; Custom function for debugging Interop
+(defun nws/debug-interop ()
+  (interactive)
+  (let* ((js-adapter-path (concat dape-adapter-dir "js-debug/src/"))
+          (dape-config `(
+            modes (js-mode js2-mode js-ts-mode)
+            host "localhost"
+            port 8123
+            command "node"
+            command-cwd ,js-adapter-path
+            command-args ("dapDebugServer.js" "8123")
+            :program #'projectile-project-root
+            :type "pwa-node"
+            :outputCapture "console"
+            :sourceMapRenames t
+            :pauseForSourceMap nil
+            :enableContentValidation t
+            :autoAttachChildProcesses t
+            :console "internalConsole"
+            :killBehavior "forceful"
+            :request "launch"
+            :mode "debug"
+            :showLog "true"
+            :pathMappings [(:localRoot ,(concat (projectile-project-root) "api-interop-layer") :remoteRoot "/code")]
+            :justMyCode "true"
+  )))
+
+  (dape dape-config)))
+
+;; Custom function for debugging Django tests
+;; that will use projectile to determine the local
+;; root dir
+(defun nws/debug-django-tests ()
+  (interactive)
+  (let ((dape-config `(
+          modes (python-ts-mode)
+          host "localhost"
+          port 34532
+          :request "attach"
+          :mode "debug"
+          :showLog "true"
+          :pathMappings [(:localRoot ,(concat (projectile-project-root) "forecast") :remoteRoot "/code")]
+          :justMyCode "true"
+          )))
+    (dape dape-config)
+))
+
 (load "~/.emacs.d/eric-functions.el")
 
 (defcustom eg/irc-password nil "Default password to use for irc" :group 'eg)
@@ -1064,9 +1037,16 @@ rcirc authinfo list for Freenode"
     (set-face-attribute 'default nil :family "iA Writer Quattro V" :height 170 :weight 'light)
     (message "Set M1 font family!")))
 
-(defvar eg/background-color "#FFFCF0")
-(set-background-color "#FFFCF0")
+(defun use-proportional-font ()
+(interactive)
+(set-face-attribute 'default nil :family "Helvetica" :height 170 :weight 'light))
 
-(defun init-background-color (interactive)
+(defvar eg/background-color "#FFFCF0")
+(run-at-time 0.5 nil (lambda () (set-background-color eg/background-color)))
+(set-background-color "#FFFCF0")
+(message "Setting background color...")
+
+(defun init-background-color ()
+(interactive)
 (set-background-color eg/background-color)
 )

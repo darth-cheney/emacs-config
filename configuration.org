@@ -34,9 +34,11 @@ Set us up to use `straight.el` as the main package manager
 Install `use-package` for package configuration
 #+begin_src emacs-lisp
   (straight-use-package 'use-package)
-;; Configure use-package to use straight.el by default
-(use-package straight
-             :custom (straight-use-package-by-default t))
+    ;; Configure use-package to use straight.el by default
+  (use-package straight
+    :custom
+    (straight-built-in-pseudo-packages '(emacs flymake eglot))
+    (straight-use-package-by-default t))
 #+end_src
 
 ** Preamble
@@ -50,6 +52,7 @@ Put custom defined variables in a separate file and load that file if it's there
 Tell us if the system is a Mac or not
 #+begin_src emacs-lisp
 (defconst *is-a-mac* (eq system-type 'darwin))
+(defconst *is-linux* (eq system-type 'gnu/linux))
 #+end_src
 
 Tell us if the system is a personal laptop
@@ -151,25 +154,6 @@ These initial defaults have been taken from an old config. Consider modifying an
    truncate-lines nil
    truncate-partial-width-windows nil)
 #+end_src
-**** Use ~prot~'s lin mode for highlighting the current line
-#+begin_src emacs-lisp
-(use-package lin
-    :straight '(lin-mode :type git :host github :repo "protesilaos/lin")
-    :bind
-    ("C-c l" . lin-mode))
-#+end_src
-**** Default font settings
-#+begin_src emacs-lisp
-;;(set-face-attribute 'default nil :font "DinaRemasterII" :weight 'regular :height 170)
-#+end_src
-
-Add a custom interactive for setting the font height
-#+begin_src emacs-lisp
-(defun eg/set-default-font-height ()
-  (interactive)
-  (let ((num (read-number "Enter new font height:  ")))
-    (set-face-attribute 'default nil :height num)))
-#+end_src
 *** Opacity Related Settings
 In the end, the following keybindings will be available:
 | M-C-8 | Decrease opacity   |
@@ -198,7 +182,6 @@ In the end, the following keybindings will be available:
 Use Unicode fonts so that we can have civilized text.
 #+begin_src emacs-lisp
 (use-package unicode-fonts
-   :ensure t
    :config
    (unicode-fonts-setup))
 
@@ -286,7 +269,6 @@ I am using ~vterm~ instead of ~ansi-term~ for the time being.
 Use ~dwim-shell-command~ for on the fly command line integration
 #+begin_src emacs-lisp
 (use-package dwim-shell-command
-  :ensure t
   :bind (([remap shell-command] . dwim-shell-command)
          :map dired-mode-map
          ([remap dired-do-async-shell-command] . dwim-shell-command)
@@ -337,23 +319,18 @@ We use the [[https://github.com/rougier/svg-lib][svg-lib]] library for allowing 
                :straight '(svg-lib :type git :host github :repo "rougier/svg-lib"))
 #+end_src
 ** Themes
-Load the DOOM Themes, which are nice defaults. Note that we have _disabled_ the default loading of the challenger-deep theme for now.
-#+begin_src emacs-lisp
-  (use-package doom-themes
-          ;;:init (load-theme 'doom-challenger-deep t)
-           )
-#+end_src
-
 *** Load the NANO theme
 #+begin_src emacs-lisp
     (use-package nano-theme
-      :ensure nil
+      ;;:ensure nil
       :straight '(nano-theme :type git :host github :repo "rougier/nano-theme")
       :custom (nano-fonts-use t)
-      :config(nano-mode)
+      :config
+      (message "Starting nano mode")
+      (nano-mode)
+      (message "Loading nano theme")
       (load-theme 'nano-light t)
-      (setq-default cursor-type 'box)
-      (set-background-color "#FFFCF0"))
+      (setq-default cursor-type 'box))
   
 #+end_src
 
@@ -367,11 +344,11 @@ Ensure that when we switch themes, we reset the cursor to be a block type
 
 Load the nano-light theme as the default
 #+begin_src emacs-lisp
-(nano-mode)
-(load-theme 'nano-light t)
-(setq-default cursor-type 'box)
+;; (nano-mode)
+;; (load-theme 'nano-light t)
+;; (setq-default cursor-type 'box)
 #+end_src
-*** Flexoki Theme
+*** Flexoki Theme :INACTIVE:
 #+begin_src emacs-lisp
 (use-package flexoki-themes
   :straight '(flexoki-themes :type git :host github :repo "crmsnbleyd/flexoki-emacs-theme"))
@@ -539,14 +516,12 @@ The following will set up a centered frame for the minibuffer when using vertico
 *** Corfu
 #+begin_src emacs-lisp
 (use-package corfu
-  :ensure t
   :custom ((corfu-cycle t) (corfu-auto t))
   :config (global-corfu-mode))
 #+end_src
 **** Use [[https://github.com/jdtsmith/kind-icon][kind-icons]] for completion icons
 #+begin_src emacs-lisp
 (use-package kind-icon
-  :ensure t
   :after corfu
   :custom
   (kind-icon-default-face 'corfu-default) ; to compute blended backgrounds correctly
@@ -580,36 +555,10 @@ Used for switching directories
   :custom (marginalia-annotators '(marginalia-annotators-heavy marginalia-annotators-light nil))
   :config (marginalia-mode))
 #+end_src
-** Counsel Settings :INACTIVE:
-We use Counsel in combination with Ivy in order to have a rich completion interface in the minibuffer.
-#+begin_src emacs-lisp
-(use-package counsel
-  :ensure t
-  :bind (("M-x" . counsel-M-x)
-	 ("C-x b" . counsel-switch-buffer)
-	 ("C-x C-f" . counsel-find-file)
-	 :map minibuffer-local-map
-	 ("C-r" . 'counsel-minibuffer-history)))
-
-;; Also init which-key, which helps with
-;; documentation and provides the delay before
-;; showing futher bindings
-(use-package which-key
-	     :init (which-key-mode)
-	     :diminish which-key-mode
-	     :config
-	     (setq which-key-idle-delay 1))
-#+end_src
 ** Icons and other Graphical Flourishes
 All the Icons provides a great set of icons for the UI. Note that you will need to run `M-x all-the-icons-install-fonts` interactively when you first load a fresh configuration.
 #+begin_src emacs-lisp
 (use-package all-the-icons)
-#+end_src
-
-** Hydra Settings
-The use of Hydra is currently _INACTIVE_.
-#+begin_src emacs-lisp
-;; (use-package hydra)
 #+end_src
 
 ** Helpful (the package) Settings
@@ -632,7 +581,6 @@ The Dashboard is the opening screen that you see when Emacs first opens.
 Using the dashboard package, we provide a customized verson of that page which shows things like the org agenda, recent files, a custom image, and buttons, etc.
 #+begin_src emacs-lisp
 (use-package dashboard
-  :ensure t
   :config (dashboard-setup-startup-hook)
   :custom ((dashboard-banner-logo-title "")
 	   (dashboard-startup-banner "~/.emacs.d/lamassu.png")
@@ -719,13 +667,14 @@ Ensure that Magit shows in full frames (this is much better)
 #+end_src
 
 #+begin_src emacs-lisp
-(use-package magit
-  :init(fullframe magit-status magit-mode-quit-window)
-  :bind (("C-x g" . magit-status))
-  :custom ((magit-diff-refine-hunk t)))
+  (use-package magit
+    :init(fullframe magit-status magit-mode-quit-window)
+    :bind (("C-x g" . magit-status))
+    :custom ((magit-diff-refine-hunk t)))
 
-(use-package git-commit
-  :hook ((git-commit-mode . goto-address-mode)))
+  (use-package git-commit
+    :straight nil
+    :hook ((git-commit-mode . goto-address-mode)))
 #+end_src
 
 ** Completion Settings
@@ -751,7 +700,8 @@ For future reference, the following prevents super weird indentation rules in th
 (defun eg/ruby-mode-hook ()
   (setq ruby-indent-level 2
         ruby-indent-tabs-mode nil)
-  (company-mode))
+  ;;(company-mode)
+  )
   
 (use-package enh-ruby-mode
   :hook
@@ -785,7 +735,6 @@ For future reference, the following prevents super weird indentation rules in th
 Add rubocop for linting
 #+begin_src emacs-lisp
 (use-package rubocop
-   :ensure t
    :init
    :hook
    (enh-ruby-mode . rubocop-mode)
@@ -808,45 +757,7 @@ Add rubocop for linting
   )
 (advice-add 'inf-ruby-console-auto :before #'rvm-activate-corresponding-ruby)
 #+end_src
-*** Node / NVM Settings
-#+begin_src emacs-lisp
-(use-package nvm
-:straight '(nvm :type git :host github :repo "rejeep/nvm.el"))
-#+end_src
-
 *** Javascript/JSX Settings
-Add regex so we can link to file lines when using compilation mode for testing and debugging
-#+begin_src emacs-lisp
-  ;; Add NodeJS error format
-  ;; (setq compilation-error-regexp-alist-alist
-  ;;       (cons '(node "^[  ]+at \\(?:[^\(\n]+ \(\\)?\\([a-zA-Z\.0-9_/-]+\\):\\([0-9]+\\):\\([0-9]+\\)\)?$"
-  ;;                          1 ;; file
-  ;;                          2 ;; line
-  ;;                          3 ;; column
-  ;;                          )
-  ;;             compilation-error-regexp-alist-alist))
-  ;; (setq compilation-error-regexp-alist-alist
-  ;;       (cons '(npm "^[  ]+at \\(?:[^\(\n]+ \(\\)?\\([a-zA-Z\.0-9_/-]+\\):\\([0-9]+\\):\\([0-9]+\\)\)?$"
-  ;;                          1 ;; file
-  ;;                          2 ;; line
-  ;;                          3 ;; column
-  ;;                          )
-  ;;             compilation-error-regexp-alist-alist))
-  ;; (setq compilation-error-regexp-alist-alist
-  ;;       (cons '(npx "^[  ]+at \\(?:[^\(\n]+ \(\\)?\\([a-zA-Z\.0-9_/-]+\\):\\([0-9]+\\):\\([0-9]+\\)\)?$"
-  ;;                          1 ;; file
-  ;;                          2 ;; line
-  ;;                          3 ;; column
-  ;;                          )
-  ;;             compilation-error-regexp-alist-alist))
-  ;; (setq compilation-error-regexp-alist
-  ;;       (cons 'node compilation-error-regexp-alist))
-  ;; (setq compilation-error-regexp-alist
-  ;;       (cons 'npx compilation-error-regexp-alist))
-  ;; (setq compilation-error-regexp-alist
-  ;;       (cons 'npm compilation-error-regexp-alist))
-#+end_src
-
 Custom hooks for JS2 and rjsx modes
 
 Install JS2 mode for dealing with Javscript files
@@ -865,13 +776,12 @@ Install JS2 mode for dealing with Javscript files
 Install Typescript mode for plain ts files
 #+begin_src emacs-lisp
 (defun eg/typescript-mode-hook ()
-  (company-mode)
+  ;;(company-mode)
   (eglot-ensure)
   (add-node-modules-path))
 ;; Taken from (https://vxlabs.com/2022/06/12/typescript-development-with-emacs-tree-sitter-and-lsp-in-2022/)
 (use-package typescript-mode
   :after tree-sitter
-  :ensure t
   :hook
   (typescript-mode . eg/typescript-mode-hook))
 (define-derived-mode typescriptreact-mode typescript-mode "TSX")
@@ -884,7 +794,7 @@ Install rjsx mode for dealing with JSX specifically. Note that in the custom hoo
 (defun eg/rjsx-mode-hook ()
         ;;(js2-minor-mode)
         (add-node-modules-path)
-        (company-mode)
+        ;;(company-mode)
         (eglot-ensure)
         )
 (use-package rjsx-mode
@@ -904,13 +814,6 @@ Try to use local eslint config files, if found
   :hook ((js2-mode . eslint-rc-mode)
          (typescript-mode . eslint-rc-mode)
          (rjsx-mode . eslint-rc-mode)))
-#+end_src
-
-We need popwin to popup special Eglot modes
-#+begin_src emacs-lisp
-(use-package popwin
-  :config (lambda ()
-            (push "*xref*" popwin:special-display-config)))
 #+end_src
 *** JSON Settings
 #+begin_src emacs-lisp
@@ -938,8 +841,8 @@ We use web-mode for editing HTML
 
 *** CSS and SASS
 #+begin_src emacs-lisp
-(use-package sass-mode)
-(add-to-list 'auto-mode-alist '("\\.scss?\\'" . sass-mode))
+(use-package scss-mode)
+(add-to-list 'auto-mode-alist '("\\.scss?\\'" . scss-mode))
 #+end_src
 
 *** Markdown
@@ -949,7 +852,6 @@ We use web-mode for editing HTML
 Use grip mode for instant previews of markdown
 #+begin_src emacs-lisp
 (use-package grip-mode
-  :ensure t
   :bind (:map markdown-mode-command-map
          ("g" . grip-mode)))
 #+end_src
@@ -971,27 +873,11 @@ Use Geiser for non-Elisp lisp modes. Here we only provide for Guile Scheme.
 #+end_src
 
 *** LSP Settings
-The following are the old settings for `lsp-mode`, which are currently _INACTIVE_. We have opted for `eglot-mode` instead, but preserve the old settings here for posterity in case we need to switch back.
-#+begin_src emacs-lisp
-  ;; (defun eg/lsp-mode-setup ()
-  ;;   (setq lsp-headerline-breadcrumb-segments '(path-up-to-project file symbols))
-  ;;   (lsp-headerline-breadcrumb-mode)
-  ;;   (lsp-deferred))
-  ;; (use-package lsp-mode
-  ;;   :commands (lsp lsp-deferred)
-  ;;   :hook ((js2-mode . eg/lsp-mode-setup))
-  ;;   :init
-  ;;   (setq lsp-keymap-prefix "C-c l")
-  ;;   :config
-  ;;   (lsp-enable-which-key-integration t))
-;; LSP ivy integration allows things like jumping
-;; to definitions in a file from a list
-;;(use-package lsp-ivy)
-#+end_src
-
 `eglot-mode` is the new preferred LSP interaction mode.
 #+begin_src emacs-lisp
 (use-package eglot
+  :custom
+  (eglot-code-action-indications '(eldoc-hint))
   :config
   ;; We define a custom eglot hover function to deal with
   ;; Solargraph's returning of null when hovering over an
@@ -1023,22 +909,11 @@ The following are the old settings for `lsp-mode`, which are currently _INACTIVE
   '(enh-ruby-mode "solargraph" "socket" "--port" :autoport))
   )
 #+end_src
-
-Tell LSP mode where to find your tsconfig file(s), when used. Taken from (https://notes.alexkehayias.com/setting-up-typescript-and-eslint-with-eglot/)
+*** DAP Settings
+Settings for the Debug Adapter Protocol
 #+begin_src emacs-lisp
-;; (defun eg/project-try-ts-config-json (dir)
-;;   (when-let* ((found (locate-dominating-file-dir "tsconfig.json")))
-;;     (cons 'eglot-project found)))
-;; (add-hook 'project-find-functions 'eg/project-try-ts-config-json nil nil)
-;; (add-to-list 'eglot-server-programs
-;;              '((typescript-mode) "typescript-language-server" "--stdio"))
-#+end_src
-
-*** Vue Settings
-#+begin_src emacs-lisp
-(use-package vue-mode)
-
-(add-to-list 'auto-mode-alist '("\\.vue\\'" . vue-mode))
+(use-package dape
+  :custom (dape-cwd-function 'projectile-project-root))
 #+end_src
 *** ELisp Mode
 #+begin_src emacs-lisp
@@ -1046,10 +921,6 @@ Tell LSP mode where to find your tsconfig file(s), when used. Taken from (https:
 #+end_src
 
 *** PHP and Drupal
-#+begin_src emacs-lisp
-(use-package drupal-mode)
-#+end_src
-
 Add hooks to for setting indentation etc
 #+begin_src emacs-lisp
 (defun eg/php-mode-hook ()
@@ -1067,25 +938,22 @@ Add hooks to for setting indentation etc
 (add-to-list 'auto-mode-alist '("\\.\\(go\\)\\'" . go-ts-mode))
 #+end_src
 *** Python
-Install pyenv
+Ensure eglot is running for python
 #+begin_src emacs-lisp
-  ;; (setq pyenv-installation-dir "/opt/homebrew/bin/pyenv")
-  ;; (use-package pyenv
-  ;;   :straight (:host github :repo "aiguofer/pyenv.el")
-  ;;   :config
-  ;;   (global-pyenv-mode))
-#+END_src
+(add-hook 'python-ts-mode #'eglot-ensure)
+#+end_src
 
 Set auto mode for python files
 #+begin_src emacs-lisp
 (add-to-list 'auto-mode-alist '("\\.\\(py\\)\\'" . python-ts-mode))
+(add-to-list 'auto-mode-alist '("\\.py\\'" . python-ts-mode))
 #+end_src
 ** General Formatting Settings
 *** Olivetti
 #+begin_src emacs-lisp
 (use-package olivetti)
 #+end_src
-** Company and Completions Settings
+** Company and Completions Settings :INACTIVE:
 We use `company-mode` for inline completions
 #+begin_src emacs-lisp
 (use-package company
@@ -1102,7 +970,7 @@ Company Box provides the completions in an overlay/modal box
   :hook (company-mode . company-box-mode))
 #+end_src
 
-** Elpher Settings
+** Elpher Settings :INACTIVE:
 Elpher is a mode for dealing with Gemini and Gopher browsing
 #+begin_src emacs-lisp
 (use-package elpher
@@ -1299,8 +1167,7 @@ We provide some nice initial Babel settings, such as appropriate fonts for code 
 ** Eshell Settings
 *** Themes
 #+begin_src emacs-lisp
-    (use-package eshell-git-prompt
-      :ensure t)
+    (use-package eshell-git-prompt)
 
 #+end_src
 
@@ -1366,6 +1233,8 @@ We provide some nice initial Babel settings, such as appropriate fonts for code 
 #+begin_src emacs-lisp
 (defun eg/eshell-mode-hook ()
   (eshell-git-prompt-use-theme 'nano-powerline))
+
+(eshell-git-prompt-use-theme 'nano-powerline)
          
 (add-hook 'eshell-mode-hook 'eg/eshell-mode-hook)
 #+end_src
@@ -1392,7 +1261,6 @@ We provide some nice initial Babel settings, such as appropriate fonts for code 
 Projectile is a package used for project management. It has many useful features, not least among them a project-wide grep within files.
 #+begin_src emacs-lisp
 (use-package projectile
-  :ensure t
   :diminish projectile-mode
   :config (projectile-mode +1)
   :bind-keymap
@@ -1451,21 +1319,10 @@ I want to have compilation buffers to have "special-mode"-like ability to quit o
 *** Flymake
 #+begin_src emacs-lisp
       (use-package flymake
-      :straight nil
       :custom
       (flymake-fringe-indicator-position nil)
       :hook
       (prog-mode . flymake-mode))
-#+end_src
-*** Flycheck :INACTIVE:
-#+begin_src emacs-lisp
-(use-package flycheck
-  :ensure t
-  :hook (flycheck-mode . add-node-modules-path)
-  :init (global-flycheck-mode))
-
-(use-package flycheck-pos-tip
-  :after flycheck)
 #+end_src
 *** Flymake Settings
 Here we use the new-and-improved built in Flymake rather than Flycheck
@@ -1522,12 +1379,10 @@ We need to whitelist certain unsafe variables as safe, when setting using a dir-
   :bind (("C-c i" . idp-main-transient))
   :straight '(idp :type git :host github :repo "18F/idp-emacs"))
 #+end_src
-
 ** Docker
 Use [[https://github.com/Silex/docker.el][docker.el]] for interacting with docker containers
 #+begin_src emacs-lisp
 (use-package docker
-  :ensure t
   :bind ("C-c d" . docker))
 #+end_src
 ** Nodeenv Sourcing
@@ -1577,6 +1432,82 @@ This function lets us source a nodeenv inside of eshell
 )
 (defalias 'eshell/wg 'eg/run-initial-weather-gov-setup t)
 #+end_src
+
+Stuff for dape/DAP
+#+begin_src emacs-lisp
+(add-to-list 'dape-configs
+'(debugpy-django-docker
+   modes (python-ts-mode)
+   host "localhost"
+   port 34235
+   :request "attach"
+   :mode "debug"
+   :showLog "true"
+))
+
+;; Custom function for debugging that will use
+;; projectile to determine the local root dir
+(defun nws/debug ()
+  (interactive)
+  (let ((dape-config `(
+          modes (python-ts-mode)
+          host "localhost"
+          port 34235
+          :request "attach"
+          :mode "debug"
+          :showLog "true"
+          :pathMappings [(:localRoot ,(concat (projectile-project-root) "forecast") :remoteRoot "/code")])))
+
+    (dape dape-config)
+))
+
+;; Custom function for debugging Interop
+(defun nws/debug-interop ()
+  (interactive)
+  (let* ((js-adapter-path (concat dape-adapter-dir "js-debug/src/"))
+          (dape-config `(
+            modes (js-mode js2-mode js-ts-mode)
+            host "localhost"
+            port 8123
+            command "node"
+            command-cwd ,js-adapter-path
+            command-args ("dapDebugServer.js" "8123")
+            :program #'projectile-project-root
+            :type "pwa-node"
+            :outputCapture "console"
+            :sourceMapRenames t
+            :pauseForSourceMap nil
+            :enableContentValidation t
+            :autoAttachChildProcesses t
+            :console "internalConsole"
+            :killBehavior "forceful"
+            :request "launch"
+            :mode "debug"
+            :showLog "true"
+            :pathMappings [(:localRoot ,(concat (projectile-project-root) "api-interop-layer") :remoteRoot "/code")]
+            :justMyCode "true"
+  )))
+
+  (dape dape-config)))
+
+;; Custom function for debugging Django tests
+;; that will use projectile to determine the local
+;; root dir
+(defun nws/debug-django-tests ()
+  (interactive)
+  (let ((dape-config `(
+          modes (python-ts-mode)
+          host "localhost"
+          port 34532
+          :request "attach"
+          :mode "debug"
+          :showLog "true"
+          :pathMappings [(:localRoot ,(concat (projectile-project-root) "forecast") :remoteRoot "/code")]
+          :justMyCode "true"
+          )))
+    (dape dape-config)
+))
+#+end_src
 ** Load Further Custom Functions
 We provide a host of over custom functions in a separate file
 #+begin_src emacs-lisp
@@ -1614,11 +1545,20 @@ If we are on the M1 Laptop, use the quattro font
     (set-face-attribute 'default nil :family "iA Writer Quattro V" :height 170 :weight 'light)
     (message "Set M1 font family!")))
 #+end_src
+
+Helper function to switch to proportional font
+#+begin_src emacs-lisp
+(defun use-proportional-font ()
+(interactive)
+(set-face-attribute 'default nil :family "Helvetica" :height 170 :weight 'light))
+#+end_src
 *** Set the background color
 But set the background color to use [[https://stephango.com/flexoki][Flexoki]] light background
 #+begin_src emacs-lisp
 (defvar eg/background-color "#FFFCF0")
+(run-at-time 0.5 nil (lambda () (set-background-color eg/background-color)))
 (set-background-color "#FFFCF0")
+(message "Setting background color...")
 
 (defun init-background-color ()
 (interactive)
