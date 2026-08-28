@@ -33,12 +33,12 @@ Set us up to use `straight.el` as the main package manager
 
 Install `use-package` for package configuration
 #+begin_src emacs-lisp
-  (straight-use-package 'use-package)
-    ;; Configure use-package to use straight.el by default
-  (use-package straight
-    :custom
-    (straight-built-in-pseudo-packages '(emacs flymake eglot))
-    (straight-use-package-by-default t))
+(straight-use-package 'use-package)
+  ;; Configure use-package to use straight.el by default
+(use-package straight
+  :custom
+  ;;(straight-built-in-pseudo-packages '(emacs flymake))
+  (straight-use-package-by-default t))
 #+end_src
 
 ** Preamble
@@ -310,7 +310,6 @@ Make sure that plain modes are at the latest versions, using straight.
 (straight-use-package '(project :type built-in))
   (use-package eldoc
     :straight t)
-
 #+end_src
 ** SVG Integration
 We use the [[https://github.com/rougier/svg-lib][svg-lib]] library for allowing dynamic SVGs to be inserted inline in certain modes, like org
@@ -660,6 +659,25 @@ Use Beacon to light the way
 	   (beacon-size 20)))
 #+end_src
 
+** LSP Settings
+`eglot-mode` is the new preferred LSP interaction mode.
+#+begin_src emacs-lisp
+(use-package eglot
+  :custom
+  (eglot-code-action-indications '(eldoc-hint))
+  :config
+  (add-to-list 'eglot-server-programs
+   '((typescript-mode) "typescript-language-server" "--stdio"))
+  (add-to-list 'eglot-server-programs
+   '((typescriptreact-mode) "typescript-language-server" "--stdio"))
+  (add-to-list 'eglot-server-programs
+  '(enh-ruby-mode "solargraph" "socket" "--port" :autoport))
+  )
+#+end_src
+
+#+RESULTS:
+: t
+
 ** Magit Settings
 Ensure that Magit shows in full frames (this is much better)
 #+begin_src emacs-lisp
@@ -677,7 +695,7 @@ Ensure that Magit shows in full frames (this is much better)
     :hook ((git-commit-mode . goto-address-mode)))
 #+end_src
 
-** Completion Settings
+** Electric pair
 Parenthesis and bracket autocompletion (see JS2 Setings for example of use)
 #+begin_src emacs-lisp
 (add-hook 'prog-mode-hook 'electric-pair-mode)
@@ -689,6 +707,11 @@ This section describes settings for specific languages, including syntax highlig
 Make sure we add binaries in a local project's node_modules folder (this lets us use project eslint, etc)
 #+begin_src emacs-lisp
 (use-package add-node-modules-path)
+#+end_src
+
+Let's activate current line highlighting for all prog-modes
+#+begin_src emacs-lisp
+(add-hook 'prog-mode-hook 'hl-line-mode)
 #+end_src
 *** Ruby Settings
 For future reference, the following prevents super weird indentation rules in the normal ruby-mode:
@@ -840,11 +863,8 @@ We use web-mode for editing HTML
 #+end_src
 
 *** CSS and SASS
-#+begin_src emacs-lisp
-(use-package scss-mode)
-(add-to-list 'auto-mode-alist '("\\.scss?\\'" . scss-mode))
-#+end_src
-
+NOTE: scss-mode has been archived and is no longer compatible with modern flymake.
+So we have removed it here.
 *** Markdown
 #+begin_src emacs-lisp
 (use-package markdown-mode)
@@ -872,43 +892,6 @@ Use Geiser for non-Elisp lisp modes. Here we only provide for Guile Scheme.
 (use-package geiser-guile)
 #+end_src
 
-*** LSP Settings
-`eglot-mode` is the new preferred LSP interaction mode.
-#+begin_src emacs-lisp
-(use-package eglot
-  :custom
-  (eglot-code-action-indications '(eldoc-hint))
-  :config
-  ;; We define a custom eglot hover function to deal with
-  ;; Solargraph's returning of null when hovering over an
-  ;; empty area. See (https://github.com/joaotavora/eglot/issues/1019#issuecomment-1230546329)
-  (defun eglot--format-markup (markup)
-  "Format MARKUP according to LSP's spec."
-  (if (plist-get markup :value)
-      (pcase-let ((`(,string ,mode)
-               (if (stringp markup) (list markup 'gfm-view-mode)
-                 (list (plist-get markup :value)
-                       (pcase (plist-get markup :kind)
-                         ("markdown" 'gfm-view-mode)
-                         ("plaintext" 'text-mode)
-                         (_ major-mode))))))
-    (with-temp-buffer
-      (setq-local markdown-fontify-code-blocks-natively t)
-      (insert string)
-      (let ((inhibit-message t)
-	    (message-log-max nil))
-        (ignore-errors (delay-mode-hooks (funcall mode))))
-      (font-lock-ensure)
-      (string-trim (filter-buffer-substring (point-min) (point-max)))))
-      "\n"))
-  (add-to-list 'eglot-server-programs
-   '((typescript-mode) "typescript-language-server" "--stdio"))
-  (add-to-list 'eglot-server-programs
-   '((typescriptreact-mode) "typescript-language-server" "--stdio"))
-  (add-to-list 'eglot-server-programs
-  '(enh-ruby-mode "solargraph" "socket" "--port" :autoport))
-  )
-#+end_src
 *** DAP Settings
 Settings for the Debug Adapter Protocol
 #+begin_src emacs-lisp
@@ -935,6 +918,7 @@ Add hooks to for setting indentation etc
 *** Go
 #+begin_src emacs-lisp
 (add-hook 'go-mode-hook 'eglot-ensure)
+(add-hook 'go-ts-mode-hook 'eglot-ensure)
 (add-to-list 'auto-mode-alist '("\\.\\(go\\)\\'" . go-ts-mode))
 #+end_src
 *** Python
@@ -948,6 +932,13 @@ Set auto mode for python files
 (add-to-list 'auto-mode-alist '("\\.\\(py\\)\\'" . python-ts-mode))
 (add-to-list 'auto-mode-alist '("\\.py\\'" . python-ts-mode))
 #+end_src
+** Justfile
+#+begin_src emacs-lisp
+(defun eg/just-ts-mode-config ()
+  (just-ts-mode-install-grammar))
+(use-package just-ts-mode
+  :config 'eg/just-ts-mode-config)
+#+END_SRC
 ** General Formatting Settings
 *** Olivetti
 #+begin_src emacs-lisp
@@ -1318,11 +1309,11 @@ I want to have compilation buffers to have "special-mode"-like ability to quit o
 ** Linting and Highlighting
 *** Flymake
 #+begin_src emacs-lisp
-      (use-package flymake
-      :custom
-      (flymake-fringe-indicator-position nil)
-      :hook
-      (prog-mode . flymake-mode))
+  ;;    (use-package flymake
+  ;;    :custom
+  ;;    (flymake-fringe-indicator-position nil)
+  ;;    :hook
+  ;;    (prog-mode . flymake-mode))
 #+end_src
 *** Flymake Settings
 Here we use the new-and-improved built in Flymake rather than Flycheck
@@ -1461,6 +1452,65 @@ Stuff for dape/DAP
     (dape dape-config)
 ))
 
+(defun nws/go-debug-exec ()
+  (interactive)
+  (let ((dape-config `(
+           modes (go-ts-mode)
+           host "0.0.0.0"
+           port 3321
+           command "dlv"
+           command-args ("dap" "--listen" "0.0.0.0:3321")
+           ;;command-cwd ,(file-name-parent-directory (buffer-file-name))
+           :type "go"
+           :request "launch"
+           :mode "debug"
+           :program ,(buffer-file-name)
+           :showLog "true"
+           :justMyCode "true"
+           )))
+
+       (dape dape-config)
+ ))
+
+ (defun nws/go-debug-ghwo ()
+   (interactive)
+   (let ((dape-config `(
+           modes (go-ts-mode)
+           host: "0.0.0.0"
+           port 3321
+           command "dlv"
+           command-args "dap" "--listen" "0.0.0.0:3321"
+           :type "go"
+           :request "launch"
+           :mode "debug"
+           :program ,(concat (projectile-project-root) "/tasks/cmd/ghwo/main.go")
+           :showLog "true"
+           :justMyCode "true"
+   )))
+   (dape dape-config)
+   ))
+
+(defun nws/go-debug-this-test ()
+  (interactive)
+  (let ((dape-config `(
+           modes (go-ts-mode)
+           host "0.0.0.0"
+           port 3321
+           command "dlv"
+           command-args ("dap" "--listen" "0.0.0.0:3321")
+           command-cwd ,(file-name-parent-directory (buffer-file-name))
+           :type "go"
+           :request "launch"
+           :mode "test"
+           :program "."
+           :showLog "true"
+           :justMyCode "true"
+           )))
+
+       (dape dape-config)
+ ))
+
+ 
 ;; Custom function for debugging Interop
 (defun nws/debug-interop ()
   (interactive)
@@ -1550,7 +1600,11 @@ Helper function to switch to proportional font
 #+begin_src emacs-lisp
 (defun use-proportional-font ()
 (interactive)
-(set-face-attribute 'default nil :family "Helvetica" :height 170 :weight 'light))
+(set-face-attribute 'default nil :family "Helvetica" :height 180 :weight 'light))
+
+(defun set-font-size (height)
+(interactive "n")
+(set-face-attribute 'default nil :height height))
 #+end_src
 *** Set the background color
 But set the background color to use [[https://stephango.com/flexoki][Flexoki]] light background

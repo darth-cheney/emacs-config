@@ -16,7 +16,7 @@
   ;; Configure use-package to use straight.el by default
 (use-package straight
   :custom
-  (straight-built-in-pseudo-packages '(emacs flymake eglot))
+  ;;(straight-built-in-pseudo-packages '(emacs flymake))
   (straight-use-package-by-default t))
 
 (setq custom-file (concat user-emacs-directory "custom.el"))
@@ -55,7 +55,7 @@
 
 (setq byte-compile-warnings '(cl-functions))
 
-(scroll-bar-mode -1)      ; Disable visible scrollbar
+  (scroll-bar-mode -1)      ; Disable visible scrollbar
   (tool-bar-mode -1)         ; Disable the toolbar
   (tooltip-mode -1)            ; Disable tooltips
   (set-fringe-mode 10)      ; Give some breathing room
@@ -228,6 +228,7 @@
   (load-theme 'nano-light t)
   (setq-default cursor-type 'box))
 
+
 (defun eg/after-theme-load (_theme &rest args)
   (message "eg/after-theme-load!")
   (setq-default cursor-type 'box)
@@ -305,7 +306,7 @@
                                :style flat)
                          :extend t)))))
 
-(defun my/minibuffer-setup ()
+  (defun my/minibuffer-setup ()
     "Install a header line in the minibuffer via an overlay (and a hook)"
   
     (set-window-margins nil 0 0)
@@ -469,6 +470,18 @@ cursor into the new window"
   :custom ((beacon-lighter "")
 	   (beacon-size 20)))
 
+(use-package eglot
+  :custom
+  (eglot-code-action-indications '(eldoc-hint))
+  :config
+  (add-to-list 'eglot-server-programs
+   '((typescript-mode) "typescript-language-server" "--stdio"))
+  (add-to-list 'eglot-server-programs
+   '((typescriptreact-mode) "typescript-language-server" "--stdio"))
+  (add-to-list 'eglot-server-programs
+  '(enh-ruby-mode "solargraph" "socket" "--port" :autoport))
+  )
+
 (use-package fullframe)
 
 (use-package magit
@@ -483,6 +496,8 @@ cursor into the new window"
 (add-hook 'prog-mode-hook 'electric-pair-mode)
 
 (use-package add-node-modules-path)
+
+(add-hook 'prog-mode-hook 'hl-line-mode)
 
 ;; (setq ruby-deep-indent-paren nil)
 
@@ -529,6 +544,7 @@ cursor into the new window"
 ;; (use-package rspec-mode
 ;; :config (setq rspec-use-rvm nil))
 ;; (add-to-list 'auto-mode-alist '(".spec\\.rb\\'" . rspec-mode))
+
 
 (use-package robe
   :after (company)
@@ -595,9 +611,6 @@ cursor into the new window"
 (add-to-list 'auto-mode-alist '("\\.html?\\'" . web-mode))
 (add-to-list 'auto-mode-alist '("\\.erb?\\'" . web-mode))
 
-(use-package scss-mode)
-(add-to-list 'auto-mode-alist '("\\.scss?\\'" . scss-mode))
-
 (use-package markdown-mode)
 
 (use-package grip-mode
@@ -612,40 +625,6 @@ cursor into the new window"
 (use-package geiser)
 (use-package geiser-guile)
 
-(use-package eglot
-  :custom
-  (eglot-code-action-indications '(eldoc-hint))
-  :config
-  ;; We define a custom eglot hover function to deal with
-  ;; Solargraph's returning of null when hovering over an
-  ;; empty area. See (https://github.com/joaotavora/eglot/issues/1019#issuecomment-1230546329)
-  (defun eglot--format-markup (markup)
-  "Format MARKUP according to LSP's spec."
-  (if (plist-get markup :value)
-      (pcase-let ((`(,string ,mode)
-               (if (stringp markup) (list markup 'gfm-view-mode)
-                 (list (plist-get markup :value)
-                       (pcase (plist-get markup :kind)
-                         ("markdown" 'gfm-view-mode)
-                         ("plaintext" 'text-mode)
-                         (_ major-mode))))))
-    (with-temp-buffer
-      (setq-local markdown-fontify-code-blocks-natively t)
-      (insert string)
-      (let ((inhibit-message t)
-	    (message-log-max nil))
-        (ignore-errors (delay-mode-hooks (funcall mode))))
-      (font-lock-ensure)
-      (string-trim (filter-buffer-substring (point-min) (point-max)))))
-      "\n"))
-  (add-to-list 'eglot-server-programs
-   '((typescript-mode) "typescript-language-server" "--stdio"))
-  (add-to-list 'eglot-server-programs
-   '((typescriptreact-mode) "typescript-language-server" "--stdio"))
-  (add-to-list 'eglot-server-programs
-  '(enh-ruby-mode "solargraph" "socket" "--port" :autoport))
-  )
-
 (use-package dape
   :custom (dape-cwd-function 'projectile-project-root))
 
@@ -658,12 +637,18 @@ cursor into the new window"
 (use-package geben)
 
 (add-hook 'go-mode-hook 'eglot-ensure)
+(add-hook 'go-ts-mode-hook 'eglot-ensure)
 (add-to-list 'auto-mode-alist '("\\.\\(go\\)\\'" . go-ts-mode))
 
 (add-hook 'python-ts-mode #'eglot-ensure)
 
 (add-to-list 'auto-mode-alist '("\\.\\(py\\)\\'" . python-ts-mode))
 (add-to-list 'auto-mode-alist '("\\.py\\'" . python-ts-mode))
+
+(defun eg/just-ts-mode-config ()
+  (just-ts-mode-install-grammar))
+(use-package just-ts-mode
+  :config 'eg/just-ts-mode-config)
 
 (use-package olivetti)
 
@@ -707,6 +692,7 @@ cursor into the new window"
             org-edit-src-content-indentation 0 ; No relative indentation for code blocks
             org-fontify-whole-block-delimiter-line t) ; Fontify whole block
 
+
 ;; (setq eg/org-mode-font-family "Baskerville")
 ;; (add-hook
 ;;  'org-mode-hook
@@ -733,6 +719,7 @@ cursor into the new window"
 ;; (message "Using macbook-m1.lan org font settings")
 
 (use-package eshell-git-prompt)
+
 
 ;; Custom eshell-git-prompt theme
 (defun eshell-git-prompt-nano-powerline ()
@@ -855,11 +842,11 @@ cursor into the new window"
 
 (add-hook 'compilation-mode-hook #'eg/compilation-mode-q)
 
-(use-package flymake
-:custom
-(flymake-fringe-indicator-position nil)
-:hook
-(prog-mode . flymake-mode))
+;;    (use-package flymake
+;;    :custom
+;;    (flymake-fringe-indicator-position nil)
+;;    :hook
+;;    (prog-mode . flymake-mode))
 
 (use-package flymake-eslint)
 (use-package flymake-ruby
@@ -967,6 +954,47 @@ cursor into the new window"
     (dape dape-config)
 ))
 
+(defun nws/go-debug-exec ()
+  (interactive)
+  (let ((dape-config `(
+           modes (go-ts-mode)
+           host "0.0.0.0"
+           port 3321
+           command "dlv"
+           command-args ("dap" "--listen" "0.0.0.0:3321")
+           command-cwd ,(file-name-parent-directory (buffer-file-name))
+           :type "go"
+           :request "launch"
+           :mode "debug"
+           :program "main.go"
+           :showLog "true"
+           :justMyCode "true"
+           )))
+
+       (dape dape-config)
+ ))
+
+(defun nws/go-debug-this-test ()
+  (interactive)
+  (let ((dape-config `(
+           modes (go-ts-mode)
+           host "0.0.0.0"
+           port 3321
+           command "dlv"
+           command-args ("dap" "--listen" "0.0.0.0:3321")
+           command-cwd ,(file-name-parent-directory (buffer-file-name))
+           :type "go"
+           :request "launch"
+           :mode "test"
+           :program "."
+           :showLog "true"
+           :justMyCode "true"
+           )))
+
+       (dape dape-config)
+ ))
+
+ 
 ;; Custom function for debugging Interop
 (defun nws/debug-interop ()
   (interactive)
@@ -1039,7 +1067,11 @@ rcirc authinfo list for Freenode"
 
 (defun use-proportional-font ()
 (interactive)
-(set-face-attribute 'default nil :family "Helvetica" :height 170 :weight 'light))
+(set-face-attribute 'default nil :family "Helvetica" :height 180 :weight 'light))
+
+(defun set-font-size (height)
+(interactive "n")
+(set-face-attribute 'default nil :height height))
 
 (defvar eg/background-color "#FFFCF0")
 (run-at-time 0.5 nil (lambda () (set-background-color eg/background-color)))
